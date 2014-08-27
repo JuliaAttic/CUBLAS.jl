@@ -56,7 +56,7 @@ function statuscheck(status)
     # let's show a backtrace here
     warn("CUBLAS error triggered from:")
     Base.show_backtrace(STDOUT, backtrace())
-    throw(statusmessage(status)
+    throw(statusmessage(status))
 end
 
 end # module

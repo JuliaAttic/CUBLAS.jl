@@ -1,5 +1,6 @@
 # Julia wrapper for header: /usr/local/cuda/include/cublas_v2.h
-# Automatically generated using Clang.jl wrap_c, version 0.0.0
+# Automatically generated using Clang.jl wrap_c, version v0.0.1
+# Manually copied from ../gen to this directory
 
 function cublasCreate_v2(handle)
   statuscheck(ccall( (:cublasCreate_v2, libcublas), cublasStatus_t, (Ptr{cublasHandle_t},), handle))
@@ -673,4 +674,3 @@ end
 function cublasZtrttp(handle, uplo, n, A, lda, AP)
   statuscheck(ccall( (:cublasZtrttp, libcublas), cublasStatus_t, (cublasHandle_t, cublasFillMode_t, Cint, Ptr{cuDoubleComplex}, Cint, Ptr{cuDoubleComplex}), handle, uplo, n, A, lda, AP))
 end
-

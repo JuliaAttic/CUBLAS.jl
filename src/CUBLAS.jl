@@ -9,7 +9,7 @@
 
 module CUBLAS
 
-# package code goes here
+using CUDArt
 
 include("libcublas_types.jl")
 
@@ -45,6 +45,7 @@ function statusmessage(status)
     if status == CUBLAS_STATUS_LICENSE_ERROR
         return "cublas license error"
     end
+    return "cublas unknown status"
 end
 
 # error handling function
@@ -58,5 +59,51 @@ function statuscheck(status)
     Base.show_backtrace(STDOUT, backtrace())
     throw(statusmessage(status))
 end
+
+# find the cublas library
+const libcublas = find_library(["libcublas"], ["/usr/local/cuda"])
+if isempty(libcublas)
+    error("CUBLAS library cannot be found")
+end
+
+include("libcublas.jl")
+
+handle = cublasHandle_t[0]
+cublasCreate_v2(handle)
+
+A = ones(5,5)
+B = ones(5,5)
+d_A = CudaArray(A)
+d_B = CudaArray(B)
+d_C = CudaArray(Float64,(5,5))
+
+# execute dgemm
+# cublasDgemm_v2(cublasHandle_t handle,
+#                cublasOperation_t transa,
+#                cublasOperation_t transb,
+#                int m,
+#                int n,
+#                int k,
+#                const double *alpha, /* host or device pointer */
+#                const double *A,
+#                int lda,
+#                const double *B,
+#                int ldb,
+#                const double *beta, /* host or device pointer */
+#                double *C,
+#                int ldc);
+cublasDgemm_v2(handle[1],
+               CUBLAS_OP_N,CUBLAS_OP_N,
+               5,5,5,[1.0],
+               d_A,5,
+               d_B,5,
+               [0.0],d_C,5)
+
+# clean up cublas, must pass the handle!!!
+cublasDestroy_v2(handle[1])
+
+# copy result back to host
+C = to_host(d_C)
+show(C)
 
 end # module

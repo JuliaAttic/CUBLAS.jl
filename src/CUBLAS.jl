@@ -72,25 +72,24 @@ include("libcublas.jl")
 # setup cublas handle
 cublashandle = cublasHandle_t[0]
 cublasCreate_v2(cublashandle)
-println(cublashandle)
 # destroy cublas handle at julia exit
 atexit(()->cublasDestroy_v2(cublashandle[1]))
 
 include("blas.jl")
 
-X = 3*ones(4,4)
-d_X = CudaArray(X)
-d_Y = CudaArray(Float64,(4,4))
-blascopy!(16,d_X,1,d_Y,1)
-Y = to_host(d_Y)
-show(Y)
-
-A = ones(5,5)
-B = ones(5,5)
-d_A = CudaArray(A)
-d_B = CudaArray(B)
-d_C = CudaArray(Float64,(5,5))
-
+#X = 3*ones(4,4)
+#d_X = CudaArray(X)
+#d_Y = CudaArray(Float64,(4,4))
+#blascopy!(16,d_X,1,d_Y,1)
+#Y = to_host(d_Y)
+#show(Y)
+#
+#A = ones(5,5)
+#B = ones(5,5)
+#d_A = CudaArray(A)
+#d_B = CudaArray(B)
+#d_C = CudaArray(Float64,(5,5))
+#
 # execute dgemm
 # cublasDgemm_v2(cublasHandle_t handle,
 #                cublasOperation_t transa,
@@ -106,15 +105,15 @@ d_C = CudaArray(Float64,(5,5))
 #                const double *beta, /* host or device pointer */
 #                double *C,
 #                int ldc);
-cublasDgemm_v2(cublashandle[1],
-               CUBLAS_OP_N,CUBLAS_OP_N,
-               5,5,5,[1.0],
-               d_A,5,
-               d_B,5,
-               [0.0],d_C,5)
-
-# copy result back to host
-C = to_host(d_C)
-show(C)
-
+#cublasDgemm_v2(cublashandle[1],
+#               CUBLAS_OP_N,CUBLAS_OP_N,
+#               5,5,5,[1.0],
+#               d_A,5,
+#               d_B,5,
+#               [0.0],d_C,5)
+#
+## copy result back to host
+#C = to_host(d_C)
+#show(C)
+#
 end # module

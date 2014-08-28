@@ -20,8 +20,7 @@ for (fname, elty) in ((:Dcopy,:Float64),
                       (:Ccopy,:Complex64))
     @eval begin
         # SUBROUTINE DCOPY(N,DX,INCX,DY,INCY)
-        function blascopy!(n::Integer, DX::Union(Ptr{$elty},CudaArray{$elty}), incx::Integer, DY::Union(Ptr{$elty},CudaArray{$elty}), incy::Integer)
-            println(cublashandle)
+        function blascopy!(n::Integer, DX::CudaArray{$elty}, incx::Integer, DY::CudaArray{$elty}, incy::Integer)
             $(cublascall(fname))(cublashandle[1],n,DX,incx,DY,incy)
             DY
         end

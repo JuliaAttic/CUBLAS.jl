@@ -1,1 +1,3 @@
 out
+libcublas.jl
+libcublas_types.jl

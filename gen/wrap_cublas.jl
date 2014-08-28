@@ -1,6 +1,6 @@
 # wrap_cublas.jl
 #
-# Script to generate CUBLAS wraper code. Generated code in libcublas_types.jl
+# Script to generate CUBLAS wrapper code. Generated code in libcublas_types.jl
 # file needs to be modified before including in the CUBLAS module. Code is
 # generated here and manually moved to the ../src directory.
 #
@@ -10,7 +10,16 @@
 #   julia> Pkg.pin("Clang",v"0.0.1")
 #   julia> Pkg.build("Clang")
 #
-# Note: this script needs to be changed for Clang.jl v0.0.2
+# To run the script execute the following from a shell in this directory:
+#   $ julia wrap_cublas.jl
+#
+# Generated files:
+#   libcublas_types.jl: contains julia representations of enums and types in
+#                       cublas_v2.h
+#   libcublas.jl: contains julia wrappers to functions in libcublas.so
+#
+# Note: this script needs to be changed for Clang.jl v0.0.2, which is in
+# METADATA.jl at the time of this writing.
 #
 # Author: Nick Henderson <nwh@stanford.edu>
 # Created: 2014-08-26

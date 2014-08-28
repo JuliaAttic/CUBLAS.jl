@@ -57,6 +57,7 @@ function statuscheck(status)
     # let's show a backtrace here
     warn("CUBLAS error triggered from:")
     Base.show_backtrace(STDOUT, backtrace())
+    println()
     throw(statusmessage(status))
 end
 
@@ -68,8 +69,21 @@ end
 
 include("libcublas.jl")
 
-handle = cublasHandle_t[0]
-cublasCreate_v2(handle)
+# setup cublas handle
+cublashandle = cublasHandle_t[0]
+cublasCreate_v2(cublashandle)
+println(cublashandle)
+# destroy cublas handle at julia exit
+atexit(()->cublasDestroy_v2(cublashandle[1]))
+
+include("blas.jl")
+
+X = 3*ones(4,4)
+d_X = CudaArray(X)
+d_Y = CudaArray(Float64,(4,4))
+blascopy!(16,d_X,1,d_Y,1)
+Y = to_host(d_Y)
+show(Y)
 
 A = ones(5,5)
 B = ones(5,5)
@@ -92,15 +106,12 @@ d_C = CudaArray(Float64,(5,5))
 #                const double *beta, /* host or device pointer */
 #                double *C,
 #                int ldc);
-cublasDgemm_v2(handle[1],
+cublasDgemm_v2(cublashandle[1],
                CUBLAS_OP_N,CUBLAS_OP_N,
                5,5,5,[1.0],
                d_A,5,
                d_B,5,
                [0.0],d_C,5)
-
-# clean up cublas, must pass the handle!!!
-cublasDestroy_v2(handle[1])
 
 # copy result back to host
 C = to_host(d_C)

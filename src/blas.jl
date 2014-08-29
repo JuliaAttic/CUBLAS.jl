@@ -7,8 +7,7 @@
 export
 # Level 1
     blascopy!,
-    scal!,
-    scal
+    scal!
 
 #function cublascall(s::Symbol)
 #    return symbol("cublas"*string(s)*"_v2")
@@ -73,6 +72,31 @@ for (fname, elty, celty) in ((:cublasSscal_v2, :Float32, :Complex64),
                                Cint),
                               cublashandle[1], 2*n, [DA], DX, incx))
             DX
+        end
+    end
+end
+
+## dot
+# cublasStatus_t cublasDdot_v2
+#   (cublasHandle_t handle,
+#    int n,
+#    const double *x, int incx,
+#    const double *y, int incy,
+#    double *result);
+for (fname, elty) in ((:cublasDdot_v2,:Float64),
+                      (:cublasSdot_v2,:Float32))
+    @eval begin
+        function dot(n::Integer,
+                     DX::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                     incx::Integer,
+                     DY::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                     incy::Integer)
+            result = Array($elty,1)
+            statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{$elty}, Cint,
+                               Ptr{$elty}, Cint, Ptr{$elty}),
+                              cublashandle[1], n, DX, incx, DY, incy, result))
+            return result[1]
         end
     end
 end

@@ -10,34 +10,47 @@ export
     scal!,
     scal
 
-function cublascall(s::Symbol)
-    return symbol("cublas"*string(s)*"_v2")
-end
+#function cublascall(s::Symbol)
+#    return symbol("cublas"*string(s)*"_v2")
+#end
 
 # Level 1
 ## copy
-for (fname, elty) in ((:Dcopy,:Float64),
-                      (:Scopy,:Float32),
-                      (:Zcopy,:Complex128),
-                      (:Ccopy,:Complex64))
+for (fname, elty) in ((:cublasDcopy_v2,:Float64),
+                      (:cublasScopy_v2,:Float32),
+                      (:cublasZcopy_v2,:Complex128),
+                      (:cublasCcopy_v2,:Complex64))
     @eval begin
         # SUBROUTINE DCOPY(N,DX,INCX,DY,INCY)
-        function blascopy!(n::Integer, DX::CudaArray{$elty}, incx::Integer, DY::CudaArray{$elty}, incy::Integer)
-            $(cublascall(fname))(cublashandle[1],n,DX,incx,DY,incy)
+        function blascopy!(n::Integer,
+                           DX::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                           incx::Integer,
+                           DY::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                           incy::Integer)
+              statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
+                                (cublasHandle_t, Cint, Ptr{$elty}, Cint,
+                                 Ptr{$elty}, Cint),
+                                cublashandle[1], n, DX, incx, DY, incy))
             DY
         end
     end
 end
 
 ## scal
-for (fname, elty) in ((:Dscal,:Float64),
-                      (:Sscal,:Float32),
-                      (:Zscal,:Complex128),
-                      (:Cscal,:Complex64))
+for (fname, elty) in ((:cublasDscal_v2,:Float64),
+                      (:cublasSscal_v2,:Float32),
+                      (:cublasZscal_v2,:Complex128),
+                      (:cublasCscal_v2,:Complex64))
     @eval begin
         # SUBROUTINE DSCAL(N,DA,DX,INCX)
-        function scal!(n::Integer, DA::$elty, DX::CudaArray{$elty}, incx::Integer)
-            $(cublascall(fname))(cublashandle[1],n,[DA],DX,incx)
+        function scal!(n::Integer,
+                       DA::$elty,
+                       DX::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                       incx::Integer)
+            statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{$elty}, Ptr{$elty},
+                               Cint),
+                              cublashandle[1], n, [DA], DX, incx))
             DX
         end
     end

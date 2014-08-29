@@ -10,6 +10,7 @@
 module CUBLAS
 
 using CUDArt
+using CUDArt.CudaDevicePtr
 
 include("libcublas_types.jl")
 

@@ -58,14 +58,21 @@ end
 # TODO: implement copy{T}(x::CudaArray{T})
 #scal{T}(n::Integer, DA::T, DX::CudaArray{T}, incx::Integer) = scal!(n, DA, copy(DX), incx)
 # In case DX is complex, and DA is real, use dscal/sscal to save flops
-#for (fname, elty, celty) in ((:Sscal, :Float32, :Complex64),
-#                             (:Dscal, :Float64, :Complex128))
-#    @eval begin
-#        # SUBROUTINE DSCAL(N,DA,DX,INCX)
-#        function scal!(n::Integer, DA::$elty, DX::CudaArray{$celty}, incx::Integer)
-#            DY = reinterpret($elty,DX,(2*n,))
-#            $(cublascall(fname))(cublashandle[1],2*n,[DA],DY,incx)
-#            DX
-#        end
-#    end
-#end
+for (fname, elty, celty) in ((:cublasSscal_v2, :Float32, :Complex64),
+                             (:cublasDscal_v2, :Float64, :Complex128))
+    @eval begin
+        # SUBROUTINE DSCAL(N,DA,DX,INCX)
+        function scal!(n::Integer,
+                       DA::$elty,
+                       DX::Union(CudaDevicePtr{$celty},CudaArray{$celty}),
+                       incx::Integer)
+            #DY = reinterpret($elty,DX,(2*n,))
+            #$(cublascall(fname))(cublashandle[1],2*n,[DA],DY,incx)
+            statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{$elty}, Ptr{$celty},
+                               Cint),
+                              cublashandle[1], 2*n, [DA], DX, incx))
+            DX
+        end
+    end
+end

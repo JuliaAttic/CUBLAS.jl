@@ -13,7 +13,7 @@ function test_blascopy!{T}(A::Array{T})
     n1 = length(A)
     d_A = CudaArray(A)
     d_B = CudaArray(T,n1)
-    blascopy!(n,d_A,1,d_B,1)
+    CUBLAS.blascopy!(n,d_A,1,d_B,1)
     B = to_host(d_B)
     @test A == B
 end
@@ -27,7 +27,7 @@ function test_scal!{T}(alpha,A::Array{T})
     @test ndims(A) == 1
     n1 = length(A)
     d_A = CudaArray(A)
-    scal!(n1,alpha,d_A,1)
+    CUBLAS.scal!(n1,alpha,d_A,1)
     A1 = to_host(d_A)
     @test_approx_eq(alpha*A,A1)
 end

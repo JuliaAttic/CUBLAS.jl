@@ -4,11 +4,6 @@
 # Modeled from julia/src/base/linalg/blas.jl
 #
 
-export
-# Level 1
-    blascopy!,
-    scal!
-
 #function cublascall(s::Symbol)
 #    return symbol("cublas"*string(s)*"_v2")
 #end

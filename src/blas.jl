@@ -71,21 +71,25 @@ for (fname, elty, celty) in ((:cublasSscal_v2, :Float32, :Complex64),
     end
 end
 
-## dot
+## dot, dotc, dotu
 # cublasStatus_t cublasDdot_v2
 #   (cublasHandle_t handle,
 #    int n,
 #    const double *x, int incx,
 #    const double *y, int incy,
 #    double *result);
-for (fname, elty) in ((:cublasDdot_v2,:Float64),
-                      (:cublasSdot_v2,:Float32))
+for (jname, fname, elty) in ((:dot,:cublasDdot_v2,:Float64),
+                             (:dot,:cublasSdot_v2,:Float32),
+                             (:dotc,:cublasZdotc_v2,:Complex128),
+                             (:dotc,:cublasCdotc_v2,:Complex64),
+                             (:dotu,:cublasZdotu_v2,:Complex128),
+                             (:dotu,:cublasCdotu_v2,:Complex64))
     @eval begin
-        function dot(n::Integer,
-                     DX::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
-                     incx::Integer,
-                     DY::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
-                     incy::Integer)
+        function $jname(n::Integer,
+                        DX::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                        incx::Integer,
+                        DY::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                        incy::Integer)
             result = Array($elty,1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Cint,
@@ -94,4 +98,20 @@ for (fname, elty) in ((:cublasDdot_v2,:Float64),
             return result[1]
         end
     end
+end
+# TODO: inspect blas.jl in julia to correct types here
+function dot{T<:Union(Float32,Float64)}(DX::CudaArray{T}, DY::CudaArray{T})
+    n = length(DX)
+    n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
+    dot(n, DX, 1, DY, 1)
+end
+function dotc{T<:Union(Complex64,Complex128)}(DX::CudaArray{T}, DY::CudaArray{T})
+    n = length(DX)
+    n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
+    dotc(n, DX, 1, DY, 1)
+end
+function dotu{T<:Union(Complex64,Complex128)}(DX::CudaArray{T}, DY::CudaArray{T})
+    n = length(DX)
+    n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
+    dotu(n, DX, 1, DY, 1)
 end

@@ -46,9 +46,45 @@ function test_dot(A,B)
     n1 = length(A)
     d_A = CudaArray(A)
     d_B = CudaArray(B)
-    cuda_dot = CUBLAS.dot(n1,d_A,1,d_B,1)
+    cuda_dot1 = CUBLAS.dot(n1,d_A,1,d_B,1)
+    cuda_dot2 = CUBLAS.dot(d_A,d_B)
     host_dot = dot(A,B)
-    @test_approx_eq(cuda_dot,host_dot)
+    @test_approx_eq(cuda_dot1,host_dot)
+    @test_approx_eq(cuda_dot2,host_dot)
 end
 test_dot(Float32[1:m],Float32[1:m])
 test_dot(Float64[1:m],Float64[1:m])
+
+# test dotu
+function test_dotu(A,B)
+    @test ndims(A) == 1
+    @test ndims(B) == 1
+    @test length(A) == length(B)
+    n1 = length(A)
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    cuda_dot1 = CUBLAS.dotu(n1,d_A,1,d_B,1)
+    cuda_dot2 = CUBLAS.dotu(d_A,d_B)
+    host_dot = A.'*B
+    @test_approx_eq(cuda_dot1,host_dot)
+    @test_approx_eq(cuda_dot2,host_dot)
+end
+test_dotu(rand(Complex64,m),rand(Complex64,m))
+test_dotu(rand(Complex128,m),rand(Complex128,m))
+
+# test dotc
+function test_dotc(A,B)
+    @test ndims(A) == 1
+    @test ndims(B) == 1
+    @test length(A) == length(B)
+    n1 = length(A)
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    cuda_dot1 = CUBLAS.dotc(n1,d_A,1,d_B,1)
+    cuda_dot2 = CUBLAS.dotc(d_A,d_B)
+    host_dot = A'*B
+    @test_approx_eq(cuda_dot1,host_dot)
+    @test_approx_eq(cuda_dot2,host_dot)
+end
+test_dotc(rand(Complex64,m),rand(Complex64,m))
+test_dotc(rand(Complex128,m),rand(Complex128,m))

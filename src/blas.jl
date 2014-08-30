@@ -115,3 +115,26 @@ function dotu{T<:Union(Complex64,Complex128)}(DX::CudaArray{T}, DY::CudaArray{T}
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
     dotu(n, DX, 1, DY, 1)
 end
+
+## nrm2
+for (fname, elty, ret_type) in ((:cublasDnrm2_v2,:Float64,:Float64),
+                                (:cublasSnrm2_v2,:Float32,:Float32),
+                                (:cublasDznrm2_v2,:Complex128,:Float64),
+                                (:cublasScnrm2_v2,:Complex64,:Float32))
+    @eval begin
+        # SUBROUTINE DNRM2(N,X,INCX)
+        function nrm2(n::Integer,
+                      X::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                      incx::Integer)
+            result = Array($ret_type,1)
+            statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{$elty}, Cint,
+                               Ptr{$ret_type}),
+                              cublashandle[1], n, X, incx, result))
+            return result[1]
+        end
+    end
+end
+# TODO: consider CudaVector and CudaStridedVector
+#nrm2(x::StridedVector) = nrm2(length(x), x, stride(x,1))
+nrm2(x::CudaArray) = nrm2(length(x), x, 1)

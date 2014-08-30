@@ -88,3 +88,19 @@ function test_dotc(A,B)
 end
 test_dotc(rand(Complex64,m),rand(Complex64,m))
 test_dotc(rand(Complex128,m),rand(Complex128,m))
+
+# test nrm2
+function test_nrm2(A)
+    @test ndims(A) == 1
+    n1 = length(A)
+    d_A = CudaArray(A)
+    cuda_nrm2_1 = CUBLAS.nrm2(n1,d_A,1)
+    cuda_nrm2_2 = CUBLAS.nrm2(d_A)
+    host_nrm2 = norm(A)
+    @test_approx_eq(cuda_nrm2_1,host_nrm2)
+    @test_approx_eq(cuda_nrm2_2,host_nrm2)
+end
+test_nrm2(rand(Float32,m))
+test_nrm2(rand(Float64,m))
+test_nrm2(rand(Complex64,m))
+test_nrm2(rand(Complex128,m))

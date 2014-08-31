@@ -120,3 +120,19 @@ test_asum(Float32[1:m])
 test_asum(Float64[1:m])
 test_asum(rand(Complex64,m))
 test_asum(rand(Complex128,m))
+
+# test axpy!
+function test_axpy!(alpha,A,B)
+    @test length(A) == length(B)
+    n1 = length(A)
+    d_A = CudaArray(A)
+    d_B1 = CudaArray(B)
+    CUBLAS.axpy!(n1,alpha,d_A,1,d_B1,1)
+    B1 = to_host(d_B1)
+    host_axpy = alpha*A + B
+    @test_approx_eq(host_axpy,B1)
+end
+test_axpy!(2.0f0,rand(Float32,m),rand(Float32,m))
+test_axpy!(2.0,rand(Float64,m),rand(Float64,m))
+test_axpy!(2.0f0+im*2.0f0,rand(Complex64,m),rand(Complex64,m))
+test_axpy!(2.0+im*2.0,rand(Complex128,m),rand(Complex128,m))

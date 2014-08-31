@@ -160,3 +160,52 @@ for (fname, elty, ret_type) in ((:cublasDasum_v2,:Float64,:Float64),
 end
 #asum(x::StridedVector) = asum(length(x), x, stride(x,1))
 asum(x::CudaArray) = asum(length(x), pointer(x), 1)
+
+## axpy
+for (fname, elty) in ((:cublasDaxpy_v2,:Float64),
+                      (:cublasSaxpy_v2,:Float32),
+                      (:cublasZaxpy_v2,:Complex128),
+                      (:cublasCaxpy_v2,:Complex64))
+    @eval begin
+        # SUBROUTINE DAXPY(N,DA,DX,INCX,DY,INCY)
+        # DY <- DA*DX + DY
+        # cublasStatus_t cublasSaxpy_v2(
+        #   cublasHandle_t handle,
+        #   int n,
+        #   const float *alpha, /* host or device pointer */
+        #   const float *x,
+        #   int incx,
+        #   float *y,
+        #   int incy);
+        function axpy!(n::Integer,
+                       alpha::($elty),
+                       dx::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                       incx::Integer,
+                       dy::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                       incy::Integer)
+            statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{$elty}, Ptr{$elty},
+                               Cint, Ptr{$elty},
+                               Cint),
+                              cublashandle[1], n, &alpha, dx, incx, dy, incy))
+            dy
+        end
+    end
+end
+
+#function axpy!{T<:BlasFloat,Ta<:Number}(alpha::Ta, x::Array{T}, y::Array{T})
+#    length(x)==length(y) || throw(DimensionMismatch(""))
+#    axpy!(length(x), convert(T,alpha), x, 1, y, 1)
+#end
+#
+#function axpy!{T<:BlasFloat,Ta<:Number,Ti<:Integer}(alpha::Ta, x::Array{T}, rx::Union(UnitRange{Ti},Range{Ti}),
+#                                         y::Array{T}, ry::Union(UnitRange{Ti},Range{Ti}))
+#
+#    length(rx)==length(ry) || throw(DimensionMismatch(""))
+#
+#    if minimum(rx) < 1 || maximum(rx) > length(x) || minimum(ry) < 1 || maximum(ry) > length(y)
+#        throw(BoundsError())
+#    end
+#    axpy!(length(rx), convert(T, alpha), pointer(x)+(first(rx)-1)*sizeof(T), step(rx), pointer(y)+(first(ry)-1)*sizeof(T), step(ry))
+#    y
+#end

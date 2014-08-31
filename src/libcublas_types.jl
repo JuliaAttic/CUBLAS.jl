@@ -57,3 +57,7 @@ typealias cublasHandle_t Ptr{cublasContext}
 # complex numbers in cuda
 typealias cuComplex Complex{Float32}
 typealias cuDoubleComplex Complex{Float64}
+# complex types from Base/linalg.jl
+typealias CublasFloat Union(Float64,Float32,Complex128,Complex64)
+typealias CublasReal Union(Float64,Float32)
+typealias CublasComplex Union(Complex128,Complex64)

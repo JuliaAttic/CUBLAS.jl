@@ -4,10 +4,6 @@
 # Modeled from julia/src/base/linalg/blas.jl
 #
 
-#function cublascall(s::Symbol)
-#    return symbol("cublas"*string(s)*"_v2")
-#end
-
 # Level 1
 ## copy
 for (fname, elty) in ((:cublasDcopy_v2,:Float64),
@@ -193,16 +189,21 @@ for (fname, elty) in ((:cublasDaxpy_v2,:Float64),
     end
 end
 
-#function axpy!{T<:BlasFloat,Ta<:Number}(alpha::Ta, x::Array{T}, y::Array{T})
-#    length(x)==length(y) || throw(DimensionMismatch(""))
-#    axpy!(length(x), convert(T,alpha), x, 1, y, 1)
-#end
-#
-#function axpy!{T<:BlasFloat,Ta<:Number,Ti<:Integer}(alpha::Ta, x::Array{T}, rx::Union(UnitRange{Ti},Range{Ti}),
-#                                         y::Array{T}, ry::Union(UnitRange{Ti},Range{Ti}))
-#
+# TODO: write test for this function
+function axpy!{T<:CublasFloat,Ta<:Number}(alpha::Ta,
+                                          x::CudaArray{T},
+                                          y::CudaArray{T})
+    length(x)==length(y) || throw(DimensionMismatch(""))
+    axpy!(length(x), convert(T,alpha), x, 1, y, 1)
+end
+
+# TODO: implement pointer arithmetic for CudaDevicePtr
+#function axpy!{T<:CublasFloat,Ta<:Number,Ti<:Integer}(alpha::Ta,
+#                                                      x::CudaArray{T},
+#                                                      rx::Union(UnitRange{Ti},Range{Ti}),
+#                                                      y::CudaArray{T},
+#                                                      ry::Union(UnitRange{Ti},Range{Ti}))
 #    length(rx)==length(ry) || throw(DimensionMismatch(""))
-#
 #    if minimum(rx) < 1 || maximum(rx) > length(x) || minimum(ry) < 1 || maximum(ry) > length(y)
 #        throw(BoundsError())
 #    end

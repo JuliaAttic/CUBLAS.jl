@@ -138,3 +138,25 @@ end
 # TODO: consider CudaVector and CudaStridedVector
 #nrm2(x::StridedVector) = nrm2(length(x), x, stride(x,1))
 nrm2(x::CudaArray) = nrm2(length(x), x, 1)
+
+## asum
+for (fname, elty, ret_type) in ((:cublasDasum_v2,:Float64,:Float64),
+                                (:cublasSasum_v2,:Float32,:Float32),
+                                (:cublasDzasum_v2,:Complex128,:Float64),
+                                (:cublasScasum_v2,:Complex64,:Float32))
+    @eval begin
+        # SUBROUTINE ASUM(N, X, INCX)
+        function asum(n::Integer,
+                      X::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                      incx::Integer)
+            result = Array($ret_type,1)
+            statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{$elty}, Cint,
+                               Ptr{$ret_type}),
+                              cublashandle[1], n, X, incx, result))
+            return result[1]
+        end
+    end
+end
+#asum(x::StridedVector) = asum(length(x), x, stride(x,1))
+asum(x::CudaArray) = asum(length(x), pointer(x), 1)

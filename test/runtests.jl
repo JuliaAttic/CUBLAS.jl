@@ -104,3 +104,19 @@ test_nrm2(rand(Float32,m))
 test_nrm2(rand(Float64,m))
 test_nrm2(rand(Complex64,m))
 test_nrm2(rand(Complex128,m))
+
+# test asum
+function test_asum(A)
+    @test ndims(A) == 1
+    n1 = length(A)
+    d_A = CudaArray(A)
+    cuda_asum1 = CUBLAS.asum(n1,d_A,1)
+    cuda_asum2 = CUBLAS.asum(d_A)
+    host_asum = sum(abs(real(A)) + abs(imag(A)))
+    @test_approx_eq(cuda_asum1,host_asum)
+    @test_approx_eq(cuda_asum2,host_asum)
+end
+test_asum(Float32[1:m])
+test_asum(Float64[1:m])
+test_asum(rand(Complex64,m))
+test_asum(rand(Complex128,m))

@@ -13,9 +13,9 @@ for (fname, elty) in ((:cublasDcopy_v2,:Float64),
     @eval begin
         # SUBROUTINE DCOPY(N,DX,INCX,DY,INCY)
         function blascopy!(n::Integer,
-                           DX::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                           DX::Union(CudaPtr{$elty},CudaArray{$elty}),
                            incx::Integer,
-                           DY::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                           DY::Union(CudaPtr{$elty},CudaArray{$elty}),
                            incy::Integer)
               statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                                 (cublasHandle_t, Cint, Ptr{$elty}, Cint,
@@ -35,7 +35,7 @@ for (fname, elty) in ((:cublasDscal_v2,:Float64),
         # SUBROUTINE DSCAL(N,DA,DX,INCX)
         function scal!(n::Integer,
                        DA::$elty,
-                       DX::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                       DX::Union(CudaPtr{$elty},CudaArray{$elty}),
                        incx::Integer)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Ptr{$elty},
@@ -54,7 +54,7 @@ for (fname, elty, celty) in ((:cublasSscal_v2, :Float32, :Complex64),
         # SUBROUTINE DSCAL(N,DA,DX,INCX)
         function scal!(n::Integer,
                        DA::$elty,
-                       DX::Union(CudaDevicePtr{$celty},CudaArray{$celty}),
+                       DX::Union(CudaPtr{$celty},CudaArray{$celty}),
                        incx::Integer)
             #DY = reinterpret($elty,DX,(2*n,))
             #$(cublascall(fname))(cublashandle[1],2*n,[DA],DY,incx)
@@ -82,9 +82,9 @@ for (jname, fname, elty) in ((:dot,:cublasDdot_v2,:Float64),
                              (:dotu,:cublasCdotu_v2,:Complex64))
     @eval begin
         function $jname(n::Integer,
-                        DX::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                        DX::Union(CudaPtr{$elty},CudaArray{$elty}),
                         incx::Integer,
-                        DY::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                        DY::Union(CudaPtr{$elty},CudaArray{$elty}),
                         incy::Integer)
             result = Array($elty,1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -120,7 +120,7 @@ for (fname, elty, ret_type) in ((:cublasDnrm2_v2,:Float64,:Float64),
     @eval begin
         # SUBROUTINE DNRM2(N,X,INCX)
         function nrm2(n::Integer,
-                      X::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                      X::Union(CudaPtr{$elty},CudaArray{$elty}),
                       incx::Integer)
             result = Array($ret_type,1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -143,7 +143,7 @@ for (fname, elty, ret_type) in ((:cublasDasum_v2,:Float64,:Float64),
     @eval begin
         # SUBROUTINE ASUM(N, X, INCX)
         function asum(n::Integer,
-                      X::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                      X::Union(CudaPtr{$elty},CudaArray{$elty}),
                       incx::Integer)
             result = Array($ret_type,1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -175,9 +175,9 @@ for (fname, elty) in ((:cublasDaxpy_v2,:Float64),
         #   int incy);
         function axpy!(n::Integer,
                        alpha::($elty),
-                       dx::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                       dx::Union(CudaPtr{$elty},CudaArray{$elty}),
                        incx::Integer,
-                       dy::Union(CudaDevicePtr{$elty},CudaArray{$elty}),
+                       dy::Union(CudaPtr{$elty},CudaArray{$elty}),
                        incy::Integer)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Ptr{$elty},
@@ -197,7 +197,7 @@ function axpy!{T<:CublasFloat,Ta<:Number}(alpha::Ta,
     axpy!(length(x), convert(T,alpha), x, 1, y, 1)
 end
 
-# TODO: implement pointer arithmetic for CudaDevicePtr
+# TODO: implement pointer arithmetic for CudaPtr
 #function axpy!{T<:CublasFloat,Ta<:Number,Ti<:Integer}(alpha::Ta,
 #                                                      x::CudaArray{T},
 #                                                      rx::Union(UnitRange{Ti},Range{Ti}),

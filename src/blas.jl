@@ -3,6 +3,10 @@
 # "High level" blas interface to cublas.
 # Modeled from julia/src/base/linalg/blas.jl
 #
+# Author: Nick Henderson <nwh@stanford.edu>
+# Created: 2014-08-26
+# License: MIT
+#
 
 # Level 1
 ## copy
@@ -189,7 +193,6 @@ for (fname, elty) in ((:cublasDaxpy_v2,:Float64),
     end
 end
 
-# TODO: write test for this function
 function axpy!{T<:CublasFloat,Ta<:Number}(alpha::Ta,
                                           x::CudaArray{T},
                                           y::CudaArray{T})
@@ -197,16 +200,16 @@ function axpy!{T<:CublasFloat,Ta<:Number}(alpha::Ta,
     axpy!(length(x), convert(T,alpha), x, 1, y, 1)
 end
 
-# TODO: implement pointer arithmetic for CudaPtr
-#function axpy!{T<:CublasFloat,Ta<:Number,Ti<:Integer}(alpha::Ta,
-#                                                      x::CudaArray{T},
-#                                                      rx::Union(UnitRange{Ti},Range{Ti}),
-#                                                      y::CudaArray{T},
-#                                                      ry::Union(UnitRange{Ti},Range{Ti}))
-#    length(rx)==length(ry) || throw(DimensionMismatch(""))
-#    if minimum(rx) < 1 || maximum(rx) > length(x) || minimum(ry) < 1 || maximum(ry) > length(y)
-#        throw(BoundsError())
-#    end
-#    axpy!(length(rx), convert(T, alpha), pointer(x)+(first(rx)-1)*sizeof(T), step(rx), pointer(y)+(first(ry)-1)*sizeof(T), step(ry))
-#    y
-#end
+function axpy!{T<:CublasFloat,Ta<:Number,Ti<:Integer}(alpha::Ta,
+                                                      x::CudaArray{T},
+                                                      rx::Union(UnitRange{Ti},Range{Ti}),
+                                                      y::CudaArray{T},
+                                                      ry::Union(UnitRange{Ti},Range{Ti}))
+    length(rx)==length(ry) || throw(DimensionMismatch(""))
+    if minimum(rx) < 1 || maximum(rx) > length(x) || minimum(ry) < 1 || maximum(ry) > length(y)
+        throw(BoundsError())
+    end
+    axpy!(length(rx), convert(T, alpha), pointer(x)+(first(rx)-1)*sizeof(T),
+          step(rx), pointer(y)+(first(ry)-1)*sizeof(T), step(ry))
+    y
+end

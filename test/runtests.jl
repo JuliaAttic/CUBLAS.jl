@@ -122,7 +122,7 @@ test_asum(rand(Complex64,m))
 test_asum(rand(Complex128,m))
 
 # test axpy!
-function test_axpy!(alpha,A,B)
+function test_axpy!_1(alpha,A,B)
     @test length(A) == length(B)
     n1 = length(A)
     d_A = CudaArray(A)
@@ -132,7 +132,55 @@ function test_axpy!(alpha,A,B)
     host_axpy = alpha*A + B
     @test_approx_eq(host_axpy,B1)
 end
-test_axpy!(2.0f0,rand(Float32,m),rand(Float32,m))
-test_axpy!(2.0,rand(Float64,m),rand(Float64,m))
-test_axpy!(2.0f0+im*2.0f0,rand(Complex64,m),rand(Complex64,m))
-test_axpy!(2.0+im*2.0,rand(Complex128,m),rand(Complex128,m))
+test_axpy!_1(2.0f0,rand(Float32,m),rand(Float32,m))
+test_axpy!_1(2.0,rand(Float64,m),rand(Float64,m))
+test_axpy!_1(2.0f0+im*2.0f0,rand(Complex64,m),rand(Complex64,m))
+test_axpy!_1(2.0+im*2.0,rand(Complex128,m),rand(Complex128,m))
+
+function test_axpy!_2(alpha,A,B)
+    @test length(A) == length(B)
+    n1 = length(A)
+    d_A = CudaArray(A)
+    d_B1 = CudaArray(B)
+    CUBLAS.axpy!(alpha,d_A,d_B1)
+    B1 = to_host(d_B1)
+    host_axpy = alpha*A + B
+    @test_approx_eq(host_axpy,B1)
+end
+test_axpy!_2(2.0f0,rand(Float32,m),rand(Float32,m))
+test_axpy!_2(2.0,rand(Float64,m),rand(Float64,m))
+test_axpy!_2(2.0f0+im*2.0f0,rand(Complex64,m),rand(Complex64,m))
+test_axpy!_2(2.0+im*2.0,rand(Complex128,m),rand(Complex128,m))
+
+function test_axpy!_3(alpha,A,B)
+    @test length(A) == length(B)
+    n1 = length(A)
+    d_A = CudaArray(A)
+    d_B1 = CudaArray(B)
+    CUBLAS.axpy!(alpha,d_A,1:2:n1,d_B1,1:2:n1)
+    B1 = to_host(d_B1)
+    host_axpy = B
+    host_axpy[1:2:n1] = alpha*A[1:2:n1] + B[1:2:n1]
+    @test_approx_eq(host_axpy,B1)
+end
+test_axpy!_3(2.0f0,rand(Float32,m),rand(Float32,m))
+test_axpy!_3(2.0,rand(Float64,m),rand(Float64,m))
+test_axpy!_3(2.0f0+im*2.0f0,rand(Complex64,m),rand(Complex64,m))
+test_axpy!_3(2.0+im*2.0,rand(Complex128,m),rand(Complex128,m))
+
+function test_axpy!_4(alpha,A,B)
+    @test length(A) == length(B)
+    n1 = length(A)
+    d_A = CudaArray(A)
+    d_B1 = CudaArray(B)
+    r = 1:div(n1,2)
+    CUBLAS.axpy!(alpha,d_A,r,d_B1,r)
+    B1 = to_host(d_B1)
+    host_axpy = B
+    host_axpy[r] = alpha*A[r] + B[r]
+    @test_approx_eq(host_axpy,B1)
+end
+test_axpy!_4(2.0f0,rand(Float32,m),rand(Float32,m))
+test_axpy!_4(2.0,rand(Float64,m),rand(Float64,m))
+test_axpy!_4(2.0f0+im*2.0f0,rand(Complex64,m),rand(Complex64,m))
+test_axpy!_4(2.0+im*2.0,rand(Complex128,m),rand(Complex128,m))

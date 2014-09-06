@@ -7,6 +7,10 @@ m = 20
 n = 35
 k = 13
 
+function blasabs(A)
+    return abs(real(A)) + abs(imag(A))
+end
+
 # test blascopy!
 function test_blascopy!{T}(A::Array{T})
     @test ndims(A) == 1
@@ -184,3 +188,22 @@ test_axpy!_4(2.0f0,rand(Float32,m),rand(Float32,m))
 test_axpy!_4(2.0,rand(Float64,m),rand(Float64,m))
 test_axpy!_4(2.0f0+im*2.0f0,rand(Complex64,m),rand(Complex64,m))
 test_axpy!_4(2.0+im*2.0,rand(Complex128,m),rand(Complex128,m))
+
+# test iamax & iamin
+function test_iamaxmin(A)
+    n1 = length(A)
+    d_A = CudaArray(A)
+    Aabs = blasabs(A)
+    imin1 = CUBLAS.iamin(n1,d_A,1)
+    imax1 = CUBLAS.iamax(n1,d_A,1)
+    imin2 = CUBLAS.iamin(d_A)
+    imax2 = CUBLAS.iamax(d_A)
+    host_imin = indmin(Aabs)
+    host_imax = indmax(Aabs)
+    @test imin1 == imin2 == host_imin
+    @test imin1 == imin2 == host_imin
+end
+test_iamaxmin(rand(Float32,m))
+test_iamaxmin(rand(Float64,m))
+test_iamaxmin(rand(Complex64,m))
+test_iamaxmin(rand(Complex128,m))

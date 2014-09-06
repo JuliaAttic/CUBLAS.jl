@@ -213,3 +213,45 @@ function axpy!{T<:CublasFloat,Ta<:Number,Ti<:Integer}(alpha::Ta,
           step(rx), pointer(y)+(first(ry)-1)*sizeof(T), step(ry))
     y
 end
+
+## iamax
+# TODO: fix iamax in julia base
+for (fname, elty) in ((:cublasIdamax_v2,:Float64),
+                      (:cublasIsamax_v2,:Float32),
+                      (:cublasIzamax_v2,:Complex128),
+                      (:cublasIcamax_v2,:Complex64))
+    @eval begin
+        function iamax(n::Integer,
+                       dx::Union(CudaPtr{$elty}, CudaArray{$elty}),
+                       incx::Integer)
+            result = Array(Cint,1)
+            statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{$elty}, Cint,
+                               Ptr{Cint}),
+                              cublashandle[1], n, dx, incx, result))
+            return result[1]
+        end
+    end
+end
+iamax(dx::CudaArray) = iamax(length(dx), dx, 1)
+
+## iamin
+# TODO: add iamin to julia base? iamin may not be in blas standard
+for (fname, elty) in ((:cublasIdamin_v2,:Float64),
+                      (:cublasIsamin_v2,:Float32),
+                      (:cublasIzamin_v2,:Complex128),
+                      (:cublasIcamin_v2,:Complex64))
+    @eval begin
+        function iamin(n::Integer,
+                       dx::Union(CudaPtr{$elty}, CudaArray{$elty}),
+                       incx::Integer)
+            result = Array(Cint,1)
+            statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{$elty}, Cint,
+                               Ptr{Cint}),
+                              cublashandle[1], n, dx, incx, result))
+            return result[1]
+        end
+    end
+end
+iamin(dx::CudaArray) = iamin(length(dx), dx, 1)

@@ -7,19 +7,19 @@ http://docs.nvidia.com/cuda/cublas/index.html
 
 ## Level 1 (13 functions)
 
-* amax
-* amin
+* [ ] amax
+* [ ] amin
 * [x] asum
 * [x] axpy
 * [x] copy
 * [x] dot, dotc, dotu
 * [x] nrm2
-* rot
-* rotg
-* rotm
-* rotmg
+* [ ] rot
+* [ ] rotg
+* [ ] rotm
+* [ ] rotmg
 * [x] scal
-* swap
+* [ ] swap
 
 ## Level 2
 

@@ -236,7 +236,7 @@ end
 iamax(dx::CudaArray) = iamax(length(dx), dx, 1)
 
 ## iamin
-# TODO: add iamin to julia base? iamin may not be in blas standard
+# iamin is not in standard blas is a CUBLAS extension
 for (fname, elty) in ((:cublasIdamin_v2,:Float64),
                       (:cublasIsamin_v2,:Float32),
                       (:cublasIzamin_v2,:Complex128),
@@ -255,3 +255,63 @@ for (fname, elty) in ((:cublasIdamin_v2,:Float64),
     end
 end
 iamin(dx::CudaArray) = iamin(length(dx), dx, 1)
+
+# Level 2
+function cublasop(trans::BlasChar)
+    if trans == 'N'
+        return CUBLAS_OP_N
+    end
+    if trans == 'T'
+        return CUBLAS_OP_T
+    end
+    if trans == 'C'
+        return CUBLAS_OP_C
+    end
+    throw("unknown cublas operation.")
+end
+## mv
+### gemv
+for (fname, elty) in ((:cublasDgemv_v2,:Float64),
+                      (:cublasSgemv_v2,:Float32),
+                      (:cublasZgemv_v2,:Complex128),
+                      (:cublasCgemv_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgemv(
+        #   cublasHandle_t handle, cublasOperation_t trans,
+        #   int m, int n,
+        #   const double *alpha,
+        #   const double *A, int lda,
+        #   const double *x, int incx,
+        #   const double *beta,
+        #   double *y, int incy)
+        function gemv!(trans::BlasChar,
+                       alpha::($elty),
+                       A::CudaMatrix{$elty},
+                       X::CudaVector{$elty},
+                       beta::($elty),
+                       Y::CudaVector{$elty})
+            # handle trans
+            cutrans = cublasop(trans)
+            m,n = size(A)
+            # check dimensions
+            length(X) == (trans == 'N' ? n : m) && length(Y) == (trans == 'N' ? m : n) || throw(DimensionMismatch(""))
+            # compute inrements
+            lda = max(1,stride(A,2)) # this may be wrong, see cublas docs
+            incx = stride(X,1)
+            incy = stride(Y,1)
+            statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasOperation_t, Cint, Cint,
+                              Ptr{$elty}, Ptr{$elty}, Cint, Ptr{$elty},
+                              Cint, Ptr{$elty}, Ptr{$elty}, Cint), cublashandle[1],
+                              cutrans, m, n, [alpha], A, lda, X, incx, [beta], Y,
+                              incy))
+            Y
+        end
+        #function gemv(trans::BlasChar, alpha::($elty), A::StridedMatrix{$elty}, X::StridedVector{$elty})
+        #    gemv!(trans, alpha, A, X, zero($elty), similar(X, $elty, size(A, (trans == 'N' ? 1 : 2))))
+        #end
+        #function gemv(trans::BlasChar, A::StridedMatrix{$elty}, X::StridedVector{$elty})
+        #    gemv!(trans, one($elty), A, X, zero($elty), similar(X, $elty, size(A, (trans == 'N' ? 1 : 2))))
+        #end
+    end
+end

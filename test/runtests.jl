@@ -11,6 +11,10 @@ function blasabs(A)
     return abs(real(A)) + abs(imag(A))
 end
 
+#################
+# level 1 tests #
+#################
+
 # test blascopy!
 function test_blascopy!{T}(A::Array{T})
     @test ndims(A) == 1
@@ -207,3 +211,46 @@ test_iamaxmin(rand(Float32,m))
 test_iamaxmin(rand(Float64,m))
 test_iamaxmin(rand(Complex64,m))
 test_iamaxmin(rand(Complex128,m))
+
+#################
+# level 2 tests #
+#################
+
+# test gemv!
+function test_gemv!(elty)
+    alpha = convert(elty,1)
+    beta = convert(elty,1)
+    A = rand(elty,m,n)
+    d_A = CudaArray(A)
+    # test y = A*x + y
+    x = rand(elty,n)
+    d_x = CudaArray(x)
+    y = rand(elty,m)
+    d_y = CudaArray(y)
+    y = A*x + y
+    CUBLAS.gemv!('N',alpha,d_A,d_x,beta,d_y)
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+    # test x = A.'*y + x
+    x = rand(elty,n)
+    d_x = CudaArray(x)
+    y = rand(elty,m)
+    d_y = CudaArray(y)
+    x = A.'*y + x
+    CUBLAS.gemv!('T',alpha,d_A,d_y,beta,d_x)
+    h_x = to_host(d_x)
+    @test_approx_eq(x,h_x)
+    # test x = A'*y + x
+    x = rand(elty,n)
+    d_x = CudaArray(x)
+    y = rand(elty,m)
+    d_y = CudaArray(y)
+    x = A'*y + x
+    CUBLAS.gemv!('C',alpha,d_A,d_y,beta,d_x)
+    h_x = to_host(d_x)
+    @test_approx_eq(x,h_x)
+end
+test_gemv!(Float32)
+test_gemv!(Float64)
+test_gemv!(Complex64)
+test_gemv!(Complex128)

@@ -10,7 +10,9 @@
 module CUBLAS
 
 using CUDArt
-using CUDArt.CudaPtr
+#using CUDArt.CudaPtr
+
+import Base.LinAlg.BlasChar
 
 include("libcublas_types.jl")
 

@@ -13,6 +13,8 @@ using CUDArt
 #using CUDArt.CudaPtr
 
 import Base.LinAlg.BlasChar
+import Base.one
+import Base.zero
 
 include("libcublas_types.jl")
 

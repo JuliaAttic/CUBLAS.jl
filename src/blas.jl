@@ -307,11 +307,11 @@ for (fname, elty) in ((:cublasDgemv_v2,:Float64),
                               incy))
             Y
         end
-        #function gemv(trans::BlasChar, alpha::($elty), A::StridedMatrix{$elty}, X::StridedVector{$elty})
-        #    gemv!(trans, alpha, A, X, zero($elty), similar(X, $elty, size(A, (trans == 'N' ? 1 : 2))))
-        #end
-        #function gemv(trans::BlasChar, A::StridedMatrix{$elty}, X::StridedVector{$elty})
-        #    gemv!(trans, one($elty), A, X, zero($elty), similar(X, $elty, size(A, (trans == 'N' ? 1 : 2))))
-        #end
+        function gemv(trans::BlasChar, alpha::($elty), A::CudaMatrix{$elty}, X::CudaVector{$elty})
+            gemv!(trans, alpha, A, X, zero($elty), similar(X, $elty, size(A, (trans == 'N' ? 1 : 2))))
+        end
+        function gemv(trans::BlasChar, A::CudaMatrix{$elty}, X::CudaVector{$elty})
+            gemv!(trans, one($elty), A, X, zero($elty), similar(X, $elty, size(A, (trans == 'N' ? 1 : 2))))
+        end
     end
 end

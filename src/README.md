@@ -25,28 +25,41 @@ CUBLAS functions:
 
 ## Level 2
 
+Key:
+* `ge`: general
+* `gb`: general banded
+* `sy`: symmetric
+* `sb`: symmetric banded
+* `sp`: symmetric packed
+* `tr`: triangular
+* `tb`: triangular banded
+* `tp`: triangular packed
+* `he`: hermitian
+* `hb`: hermitian banded
+* `hp`: hermitian packed
+
 CUBLAS functions:
 
-* [ ] gbmv
-* [ ] gemv
-* [ ] ger
-* [ ] sbmv
+* [ ] gbmv (in julia/blas.jl)
+* [x] gemv (in julia/blas.jl)
+* [ ] ger (in julia/blas.jl)
+* [ ] sbmv (in julia/blas.jl)
 * [ ] spmv
 * [ ] spr
 * [ ] spr2
-* [ ] symv
-* [ ] syr
+* [ ] symv (in julia/blas.jl)
+* [ ] syr (in julia/blas.jl)
 * [ ] syr2
 * [ ] tbmv
 * [ ] tbsv
 * [ ] tpmv
 * [ ] tpsv
-* [ ] trmv
-* [ ] trsv
-* [ ] hemv
+* [ ] trmv (in julia/blas.jl)
+* [ ] trsv (in julia/blas.jl)
+* [ ] hemv (in julia/blas.jl)
 * [ ] hbmv
 * [ ] hpmv
-* [ ] her
+* [ ] her (in julia/blas.jl)
 * [ ] her2
 * [ ] hpr
 * [ ] hpr2

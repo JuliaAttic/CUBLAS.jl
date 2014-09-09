@@ -1,3 +1,4 @@
+# convert matrix to band storage
 function band(A::AbstractMatrix,kl,ku)
     m, n = size(A)
     AB = zeros(eltype(A),kl+ku+1,n)
@@ -9,6 +10,7 @@ function band(A::AbstractMatrix,kl,ku)
     return AB
 end
 
+# convert band storage to general matrix
 function unband(AB::AbstractMatrix,m,kl,ku)
     bm, n = size(AB)
     A = zeros(eltype(AB),m,n)
@@ -18,4 +20,12 @@ function unband(AB::AbstractMatrix,m,kl,ku)
         end
     end
     return A
+end
+
+# zero out elements not on matrix bands
+function bandex(A::AbstractMatrix,kl,ku)
+    m, n = size(A)
+    AB = band(A,kl,ku)
+    B = unband(AB,m,kl,ku)
+    return B
 end

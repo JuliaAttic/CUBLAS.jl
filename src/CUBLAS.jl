@@ -16,7 +16,7 @@ import Base.LinAlg.BlasChar
 import Base.one
 import Base.zero
 
-export band, unband
+export band, unband, bandex
 
 include("util.jl")
 include("libcublas_types.jl")

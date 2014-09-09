@@ -16,6 +16,9 @@ import Base.LinAlg.BlasChar
 import Base.one
 import Base.zero
 
+export band, unband
+
+include("util.jl")
 include("libcublas_types.jl")
 
 # get cublas status message

@@ -1,4 +1,5 @@
 import Base.dot
+import Base.LinAlg.BLAS
 using CUBLAS
 using CUDArt
 using Base.Test
@@ -298,3 +299,77 @@ test_gemv(Float32)
 test_gemv(Float64)
 test_gemv(Complex64)
 test_gemv(Complex128)
+
+##############
+# test gbmv! #
+##############
+
+function test_gbmv!(elty)
+    # parameters
+    alpha = convert(elty,2)
+    beta = convert(elty,3)
+    # bands
+    ku = 2
+    kl = 3
+    # generate banded matrix
+    A = rand(elty,m,n)
+    A = bandex(A,kl,ku)
+    # get packed format
+    Ab = band(A,kl,ku)
+    d_Ab = CudaArray(Ab)
+    # test y = alpha*A*x + beta*y
+    x = rand(elty,n)
+    d_x = CudaArray(x)
+    y = rand(elty,m)
+    d_y = CudaArray(y)
+    CUBLAS.gbmv!('N',m,kl,ku,alpha,d_Ab,d_x,beta,d_y)
+    BLAS.gbmv!('N',m,kl,ku,alpha,Ab,x,beta,y)
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+    # test y = alpha*A.'*x + beta*y
+    x = rand(elty,n)
+    d_x = CudaArray(x)
+    y = rand(elty,m)
+    d_y = CudaArray(y)
+    CUBLAS.gbmv!('T',m,kl,ku,alpha,d_Ab,d_y,beta,d_x)
+    BLAS.gbmv!('T',m,kl,ku,alpha,Ab,y,beta,x)
+    h_x = to_host(d_x)
+    @test_approx_eq(x,h_x)
+    # test y = alpha*A'*x + beta*y
+    x = rand(elty,n)
+    d_x = CudaArray(x)
+    y = rand(elty,m)
+    d_y = CudaArray(y)
+    CUBLAS.gbmv!('C',m,kl,ku,alpha,d_Ab,d_y,beta,d_x)
+    BLAS.gbmv!('C',m,kl,ku,alpha,Ab,y,beta,x)
+    h_x = to_host(d_x)
+    @test_approx_eq(x,h_x)
+end
+test_gbmv!(Float32)
+test_gbmv!(Float64)
+test_gbmv!(Complex64)
+test_gbmv!(Complex128)
+
+function test_gbmv(elty)
+    # parameters
+    alpha = convert(elty,2)
+    # bands
+    ku = 2
+    kl = 3
+    # generate banded matrix
+    A = rand(elty,m,n)
+    A = bandex(A,kl,ku)
+    # get packed format
+    Ab = band(A,kl,ku)
+    d_Ab = CudaArray(Ab)
+    # test y = alpha*A*x
+    x = rand(elty,n)
+    d_x = CudaArray(x)
+    d_y = CUBLAS.gbmv('N',m,kl,ku,alpha,d_Ab,d_x)
+    y = zeros(elty,m)
+    #y = BLAS.gbmv('N',m,kl,ku,alpha,Ab,x)
+    h_y = to_host(d_y)
+    #@test_approx_eq(y,h_y)
+    println("end of test_gbmv()")
+end
+test_gbmv(Float32)

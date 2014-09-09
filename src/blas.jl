@@ -295,8 +295,8 @@ for (fname, elty) in ((:cublasDgemv_v2,:Float64),
             m,n = size(A)
             # check dimensions
             length(X) == (trans == 'N' ? n : m) && length(Y) == (trans == 'N' ? m : n) || throw(DimensionMismatch(""))
-            # compute inrements
-            lda = max(1,stride(A,2)) # this may be wrong, see cublas docs
+            # compute increments
+            lda = max(1,stride(A,2))
             incx = stride(X,1)
             incy = stride(Y,1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -312,6 +312,67 @@ for (fname, elty) in ((:cublasDgemv_v2,:Float64),
         end
         function gemv(trans::BlasChar, A::CudaMatrix{$elty}, X::CudaVector{$elty})
             gemv!(trans, one($elty), A, X, zero($elty), similar(X, $elty, size(A, (trans == 'N' ? 1 : 2))))
+        end
+    end
+end
+
+### (GB) general banded matrix-vector multiplication
+for (fname, elty) in ((:cublasDgbmv_v2,:Float64),
+                      (:cublasSgbmv_v2,:Float32),
+                      (:cublasZgbmv_v2,:Complex128),
+                      (:cublasCgbmv_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgbmv(
+        #   cublasHandle_t handle, cublasOperation_t trans,
+        #   int m, int n, int kl, int ku,
+        #   const double *alpha, const double *A, int lda,
+        #   const double *x, int incx,
+        #   const double *beta, double *y, int incy)
+        function gbmv!(trans::BlasChar,
+                       m::Integer,
+                       kl::Integer,
+                       ku::Integer,
+                       alpha::($elty),
+                       A::CudaMatrix{$elty},
+                       x::CudaVector{$elty},
+                       beta::($elty),
+                       y::CudaVector{$elty})
+            # handle trans
+            cutrans = cublasop(trans)
+            n = size(A,2)
+            # check dimensions
+            length(x) == (trans == 'N' ? n : m) && length(y) == (trans == 'N' ? m : n) || throw(DimensionMismatch(""))
+            # compute increments
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasOperation_t, Cint, Cint,
+                               Cint, Cint, Ptr{$elty}, Ptr{$elty}, Cint,
+                               Ptr{$elty}, Cint, Ptr{$elty}, Ptr{$elty},
+                               Cint), cublashandle[1], cutrans, m, n, kl, ku, [alpha], A,
+                              lda, x, incx, [beta], y, incy))
+            y
+        end
+        function gbmv(trans::BlasChar,
+                      m::Integer,
+                      kl::Integer,
+                      ku::Integer,
+                      alpha::($elty),
+                      A::CudaMatrix{$elty},
+                      x::CudaVector{$elty})
+            # TODO: fix gbmv bug in julia
+            n = size(A,2)
+            leny = trans == 'N' ? m : n
+            gbmv!(trans, m, kl, ku, alpha, A, x, zero($elty), similar(x, $elty, leny))
+        end
+        function gbmv(trans::BlasChar,
+                      m::Integer,
+                      kl::Integer,
+                      ku::Integer,
+                      A::CudaMatrix{$elty},
+                      x::CudaVector{$elty})
+            gbmv(trans, m, kl, ku, one($elty), A, x)
         end
     end
 end

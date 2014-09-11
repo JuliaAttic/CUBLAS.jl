@@ -40,7 +40,7 @@ Key:
 
 CUBLAS functions:
 
-* [ ] gbmv (in julia/blas.jl)
+* [x] gbmv (in julia/blas.jl)
 * [x] gemv (in julia/blas.jl)
 * [ ] ger (in julia/blas.jl)
 * [ ] sbmv (in julia/blas.jl)

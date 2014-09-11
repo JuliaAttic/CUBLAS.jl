@@ -350,6 +350,7 @@ test_gbmv!(Float64)
 test_gbmv!(Complex64)
 test_gbmv!(Complex128)
 
+# TODO: complete this test when BLAS.gbmv is fixed
 function test_gbmv(elty)
     # parameters
     alpha = convert(elty,2)
@@ -370,6 +371,61 @@ function test_gbmv(elty)
     #y = BLAS.gbmv('N',m,kl,ku,alpha,Ab,x)
     h_y = to_host(d_y)
     #@test_approx_eq(y,h_y)
-    println("end of test_gbmv()")
 end
 test_gbmv(Float32)
+test_gbmv(Float64)
+test_gbmv(Complex64)
+test_gbmv(Complex128)
+
+#############
+# test symv #
+#############
+
+function test_symv!(elty)
+    # parameters
+    alpha = convert(elty,2)
+    beta = convert(elty,3)
+    # generate symmetric matrix
+    A = rand(elty,m,m)
+    A = A + A.'
+    # generate vectors
+    x = rand(elty,m)
+    y = rand(elty,m)
+    # copy to device
+    d_A = CudaArray(A)
+    d_x = CudaArray(x)
+    d_y = CudaArray(y)
+    # execute on host
+    BLAS.symv!('U',alpha,A,x,beta,y)
+    # execute on device
+    CUBLAS.symv!('U',alpha,d_A,d_x,beta,d_y)
+    # compare results
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_symv!(Float32)
+test_symv!(Float64)
+test_symv!(Complex64)
+test_symv!(Complex128)
+
+function test_symv(elty)
+    # generate symmetric matrix
+    A = rand(elty,m,m)
+    A = A + A.'
+    # generate vectors
+    x = rand(elty,m)
+    # copy to device
+    d_A = CudaArray(A)
+    d_x = CudaArray(x)
+    # execute on host
+    y = BLAS.symv('U',A,x)
+    # execute on device
+    d_y = CUBLAS.symv('U',d_A,d_x)
+    # compare results
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_symv(Float32)
+test_symv(Float64)
+test_symv(Complex64)
+test_symv(Complex128)

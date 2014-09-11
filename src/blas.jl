@@ -8,6 +8,33 @@
 # License: MIT
 #
 
+# Utility functions
+
+# convert BlasChar {N,T,C} to cublasOperation_t
+function cublasop(trans::BlasChar)
+    if trans == 'N'
+        return CUBLAS_OP_N
+    end
+    if trans == 'T'
+        return CUBLAS_OP_T
+    end
+    if trans == 'C'
+        return CUBLAS_OP_C
+    end
+    throw("unknown cublas operation.")
+end
+
+# convert BlasChar {U,L} to cublasFillMode_t
+function cublasfill(uplo::BlasChar)
+    if uplo == 'U'
+        return CUBLAS_FILL_MODE_UPPER
+    end
+    if uplo == 'L'
+        return CUBLAS_FILL_MODE_LOWER
+    end
+    throw("unknown cublas fill mode")
+end
+
 # Level 1
 ## copy
 for (fname, elty) in ((:cublasDcopy_v2,:Float64),
@@ -257,18 +284,6 @@ end
 iamin(dx::CudaArray) = iamin(length(dx), dx, 1)
 
 # Level 2
-function cublasop(trans::BlasChar)
-    if trans == 'N'
-        return CUBLAS_OP_N
-    end
-    if trans == 'T'
-        return CUBLAS_OP_T
-    end
-    if trans == 'C'
-        return CUBLAS_OP_C
-    end
-    throw("unknown cublas operation.")
-end
 ## mv
 ### gemv
 for (fname, elty) in ((:cublasDgemv_v2,:Float64),
@@ -373,6 +388,49 @@ for (fname, elty) in ((:cublasDgbmv_v2,:Float64),
                       A::CudaMatrix{$elty},
                       x::CudaVector{$elty})
             gbmv(trans, m, kl, ku, one($elty), A, x)
+        end
+    end
+end
+
+### symv
+for (fname, elty) in ((:cublasDsymv_v2,:Float64),
+                      (:cublasSsymv_v2,:Float32),
+                      (:cublasZsymv_v2,:Complex128),
+                      (:cublasCsymv_v2,:Complex64))
+    # Note that the complex symv are not BLAS but auiliary functions in LAPACK
+    @eval begin
+        # cublasStatus_t cublasDsymv(
+        #   cublasHandle_t handle, cublasFillMode_t uplo,
+        #   int n, const double *alpha, const double *A, int lda,
+        #   const double *x, int incx,
+        #   const double *beta, double *y, int incy)
+        function symv!(uplo::BlasChar,
+                       alpha::($elty),
+                       A::CudaMatrix{$elty},
+                       x::CudaVector{$elty},
+                       beta::($elty),
+                       y::CudaVector{$elty})
+            cuuplo = cublasfill(uplo)
+            m, n = size(A)
+            if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
+            if m != length(x) || m != length(y) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasFillMode_t,
+                              Cint,Ptr{$elty}, Ptr{$elty}, Cint,
+                              Ptr{$elty}, Cint, Ptr{$elty},
+                              Ptr{$elty},Cint),
+                              cublashandle[1], cuuplo, n, [alpha],
+                              A, lda, x, incx, [beta], y, incy))
+            y
+        end
+        function symv(uplo::BlasChar, alpha::($elty), A::CudaMatrix{$elty}, x::CudaVector{$elty})
+                symv!(uplo, alpha, A, x, zero($elty), similar(x))
+        end
+        function symv(uplo::BlasChar, A::CudaMatrix{$elty}, x::CudaVector{$elty})
+            symv(uplo, one($elty), A, x)
         end
     end
 end

@@ -434,3 +434,47 @@ for (fname, elty) in ((:cublasDsymv_v2,:Float64),
         end
     end
 end
+
+### hemv
+# TODO: fix chemv_ function call bug in julia
+for (fname, elty) in ((:cublasZhemv_v2,:Complex128),
+                      (:cublasChemv_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasChemv(
+        #   cublasHandle_t handle, cublasFillMode_t uplo,
+        #   int n, const cuComplex *alpha, const cuComplex *A, int lda,
+        #   const cuComplex *x, int incx,
+        #   const cuComplex *beta, cuComplex *y, int incy)
+        function hemv!(uplo::BlasChar,
+                       alpha::$elty,
+                       A::CudaMatrix{$elty},
+                       x::CudaVector{$elty},
+                       beta::$elty,
+                       y::CudaVector{$elty})
+            # TODO: fix dimension check bug in julia
+            cuuplo = cublasfill(uplo)
+            m, n = size(A)
+            if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
+            if m != length(x) || m != length(y) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasFillMode_t,
+                              Cint,Ptr{$elty}, Ptr{$elty}, Cint,
+                              Ptr{$elty}, Cint, Ptr{$elty},
+                              Ptr{$elty},Cint),
+                              cublashandle[1], cuuplo, n, [alpha],
+                              A, lda, x, incx, [beta], y, incy))
+            y
+        end
+        function hemv(uplo::BlasChar, alpha::($elty), A::CudaMatrix{$elty},
+                      x::CudaVector{$elty})
+            hemv!(uplo, alpha, A, x, zero($elty), similar(x))
+        end
+        function hemv(uplo::BlasChar, A::CudaMatrix{$elty},
+                      x::CudaVector{$elty})
+            hemv(uplo, one($elty), A, x)
+        end
+    end
+end

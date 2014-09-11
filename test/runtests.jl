@@ -429,3 +429,53 @@ test_symv(Float32)
 test_symv(Float64)
 test_symv(Complex64)
 test_symv(Complex128)
+
+##############
+# test hemv! #
+##############
+
+function test_hemv!(elty)
+    # parameters
+    alpha = convert(elty,2)
+    beta = convert(elty,3)
+    # generate hermitian matrix
+    A = rand(elty,m,m)
+    A = A + A'
+    # generate vectors
+    x = rand(elty,m)
+    y = rand(elty,m)
+    # copy to device
+    d_A = CudaArray(A)
+    d_x = CudaArray(x)
+    d_y = CudaArray(y)
+    # execute on host
+    #BLAS.hemv!('U',alpha,A,x,beta,y)
+    # execute on device
+    CUBLAS.hemv!('U',alpha,d_A,d_x,beta,d_y)
+    # compare results
+    h_y = to_host(d_y)
+    #@test_approx_eq(y,h_y)
+end
+# BLAS.hemv! is not in julia v0.3.0
+test_hemv!(Complex64)
+test_hemv!(Complex128)
+
+function test_hemv(elty)
+    # generate hermitian matrix
+    A = rand(elty,m,m)
+    A = A + A.'
+    # generate vectors
+    x = rand(elty,m)
+    # copy to device
+    d_A = CudaArray(A)
+    d_x = CudaArray(x)
+    # execute on host
+    #y = BLAS.hemv('U',A,x)
+    # execute on device
+    d_y = CUBLAS.hemv('U',d_A,d_x)
+    # compare results
+    h_y = to_host(d_y)
+    #@test_approx_eq(y,h_y)
+end
+test_hemv(Complex64)
+test_hemv(Complex128)

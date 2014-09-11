@@ -47,7 +47,7 @@ CUBLAS functions:
 * [ ] spmv
 * [ ] spr
 * [ ] spr2
-* [ ] symv (in julia/blas.jl)
+* [x] symv (in julia/blas.jl)
 * [ ] syr (in julia/blas.jl)
 * [ ] syr2
 * [ ] tbmv

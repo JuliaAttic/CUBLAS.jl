@@ -479,3 +479,66 @@ function test_hemv(elty)
 end
 test_hemv(Complex64)
 test_hemv(Complex128)
+
+##############
+# test sbmv! #
+##############
+
+function test_sbmv!(elty)
+    # parameters
+    alpha = convert(elty,3)
+    beta = convert(elty,2.5)
+    # generate symmetric matrix
+    A = rand(elty,m,m)
+    A = A + A'
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,nbands,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # construct x and y
+    x = rand(elty,m)
+    y = rand(elty,m)
+    # move to host
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    d_y = CudaArray(y)
+    # sbmv!
+    CUBLAS.sbmv!('U',nbands,alpha,d_AB,d_x,beta,d_y)
+    y = alpha*(A*x) + beta*y
+    # compare
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_sbmv!(Float32)
+test_sbmv!(Float64)
+
+function test_sbmv(elty)
+    # parameters
+    alpha = convert(elty,3)
+    beta = convert(elty,2.5)
+    # generate symmetric matrix
+    A = rand(elty,m,m)
+    A = A + A'
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,nbands,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # construct x and y
+    x = rand(elty,m)
+    y = rand(elty,m)
+    # move to host
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    # sbmv!
+    d_y = CUBLAS.sbmv('U',nbands,d_AB,d_x)
+    y = A*x
+    # compare
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_sbmv(Float32)
+test_sbmv(Float64)

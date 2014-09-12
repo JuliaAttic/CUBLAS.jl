@@ -126,7 +126,7 @@ for (jname, fname, elty) in ((:dot,:cublasDdot_v2,:Float64),
         end
     end
 end
-# TODO: inspect blas.jl in julia to correct types here
+# TODO: inspect blas.jl in julia to correct types here (dot{c,u})
 function dot{T<:Union(Float32,Float64)}(DX::CudaArray{T}, DY::CudaArray{T})
     n = length(DX)
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
@@ -482,7 +482,6 @@ end
 ### sbmv, (SB) symmetric banded matrix-vector multiplication
 # cublas only has this for D and S
 # TODO: check in julia, blas may not have sbmv for C and Z!
-#= work in progress
 for (fname, elty) in ((:cublasDsbmv_v2,:Float64),
                       (:cublasSsbmv_v2,:Float32))
     @eval begin
@@ -498,13 +497,21 @@ for (fname, elty) in ((:cublasDsbmv_v2,:Float64),
                        x::CudaVector{$elty},
                        beta::($elty),
                        y::CudaVector{$elty})
-            ccall(($(string(fname)),libblas), Void,
-                (Ptr{Uint8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
-                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
-                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
-                 &uplo, &size(A,2), &k, &alpha,
-                 A, &max(1,stride(A,2)), x, &stride(x,1),
-                 &beta, y, &stride(y,1))
+            cuuplo = cublasfill(uplo)
+            m, n = size(A)
+            #if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
+            if !(1<=(1+k)<=n) throw(DimensionMismatch("Incorrect number of bands")) end
+            if m < 1+k throw(DimensionMismatch("Array A has fewer than 1+k rows")) end
+            if n != length(x) || n != length(y) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasFillMode_t, Cint, Cint,
+                              Ptr{$elty}, Ptr{$elty}, Cint, Ptr{$elty}, Cint,
+                              Ptr{$elty}, Ptr{$elty}, Cint), cublashandle[1],
+                              cuuplo, n, k, [alpha], A, lda, x, incx, [beta], y,
+                              incy))
             y
         end
         function sbmv(uplo::BlasChar, k::Integer, alpha::($elty),
@@ -518,4 +525,3 @@ for (fname, elty) in ((:cublasDsbmv_v2,:Float64),
         end
     end
 end
-=#

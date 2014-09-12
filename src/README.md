@@ -43,7 +43,7 @@ CUBLAS functions:
 * [x] gbmv (in julia/blas.jl)
 * [x] gemv (in julia/blas.jl)
 * [ ] ger (in julia/blas.jl)
-* [ ] sbmv (in julia/blas.jl)
+* [x] sbmv (in julia/blas.jl)
 * [ ] spmv
 * [ ] spr
 * [ ] spr2
@@ -68,18 +68,18 @@ CUBLAS functions:
 
 CUBLAS functions:
 
-* [ ] gemm
+* [ ] gemm (in julia/blas.jl)
 * [ ] gemmBatched
-* [ ] symm
-* [ ] syrk
-* [ ] syr2k
+* [ ] symm (in julia/blas.jl)
+* [ ] syrk (in julia/blas.jl)
+* [ ] syr2k (in julia/blas.jl)
 * [ ] syrkx
-* [ ] trmm
-* [ ] trsm
+* [ ] trmm (in julia/blas.jl)
+* [ ] trsm (in julia/blas.jl)
 * [ ] trsmBatched
 * [ ] hemm
-* [ ] herk
-* [ ] her2k
+* [ ] herk (in julia/blas.jl)
+* [ ] her2k (in julia/blas.jl)
 * [ ] herkx
 
 ## BLAS-like extensions

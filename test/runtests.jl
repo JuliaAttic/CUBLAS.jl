@@ -687,3 +687,29 @@ test_syr!(Float32)
 test_syr!(Float64)
 test_syr!(Complex64)
 test_syr!(Complex128)
+
+#############
+# test her! #
+#############
+
+function test_her!(elty)
+    local m = 2
+    # construct matrix and vector
+    A = rand(elty,m,m)
+    A = A + A'
+    x = rand(elty,m)
+    alpha = convert(elty,2)
+    # move to device
+    d_A = CudaArray(A)
+    d_x = CudaArray(x)
+    # perform rank one update
+    CUBLAS.her!('U',alpha,d_x,d_A)
+    A = (alpha*x)*x' + A
+    # move to host and compare upper triangles
+    h_A = to_host(d_A)
+    A = triu(A)
+    h_A = triu(h_A)
+    @test_approx_eq(A,h_A)
+end
+test_her!(Complex64)
+test_her!(Complex128)

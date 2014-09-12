@@ -59,7 +59,7 @@ CUBLAS functions:
 * [x] hemv (in julia/blas.jl)
 * [ ] hbmv
 * [ ] hpmv
-* [ ] her (in julia/blas.jl)
+* [x] her (in julia/blas.jl)
 * [ ] her2
 * [ ] hpr
 * [ ] hpr2

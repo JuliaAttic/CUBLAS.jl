@@ -35,6 +35,17 @@ function cublasfill(uplo::BlasChar)
     throw("unknown cublas fill mode")
 end
 
+# convert BlasChar {} to cublasDiagType_t
+function cublasdiag(diag::BlasChar)
+    if diag == 'U'
+        return CUBLAS_DIAG_UNIT
+    end
+    if diag == 'N'
+        return CUBLAS_DIAG_NON_UNIT
+    end
+    throw("unknown cublas diag mode")
+end
+
 # Level 1
 ## copy
 for (fname, elty) in ((:cublasDcopy_v2,:Float64),
@@ -523,5 +534,52 @@ for (fname, elty) in ((:cublasDsbmv_v2,:Float64),
                       x::CudaVector{$elty})
             sbmv(uplo, k, one($elty), A, x)
         end
+    end
+end
+
+### trmv, Triangular matrix-vector multiplication
+for (fname, elty) in ((:cublasDtrmv_v2,:Float64),
+                      (:cublasStrmv_v2,:Float32),
+                      (:cublasZtrmv_v2,:Complex128),
+                      (:cublasCtrmv_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDtrmv(
+        #   cublasHandle_t handle, cublasFillMode_t uplo,
+        #   cublasOperation_t trans, cublasDiagType_t diag,
+        #   int n, const double *A, int lda,
+        #   double *x, int incx)
+        function trmv!(uplo::BlasChar,
+                       trans::BlasChar,
+                       diag::BlasChar,
+                       A::CudaMatrix{$elty},
+                       x::CudaVector{$elty})
+            m, n = size(A)
+            if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
+            if n != length(x)
+                throw(DimensionMismatch("length(x)=$(length(x))does not match
+                                        size(A)=$(size(A))"))
+            end
+            cuuplo = cublasfill(uplo)
+            cutrans = cublasop(trans)
+            cudiag = cublasdiag(diag)
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasFillMode_t,
+                               cublasOperation_t, cublasDiagType_t, Cint,
+                               Ptr{$elty}, Cint, Ptr{$elty}, Cint), cublashandle[1],
+                              cuuplo, cutrans, cudiag, n, A, lda, x, incx))
+            x
+        end
+        #=
+        # TODO: implement copy for CudaArray
+        function trmv(uplo::BlasChar,
+                      trans::BlasChar,
+                      diag::BlasChar,
+                      A::CudaMatrix{$elty},
+                      x::CudaVector{$elty})
+            trmv!(uplo, trans, diag, A, copy(x))
+        end
+        =#
     end
 end

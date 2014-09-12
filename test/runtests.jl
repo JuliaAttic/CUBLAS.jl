@@ -542,3 +542,52 @@ function test_sbmv(elty)
 end
 test_sbmv(Float32)
 test_sbmv(Float64)
+
+##############
+# test trmv! #
+##############
+
+function test_trmv!(elty)
+    # generate triangular matrix
+    A = rand(elty,m,m)
+    A = triu(A)
+    # generate vector
+    x = rand(elty,m)
+    # move to device
+    d_A = CudaArray(A)
+    d_x = CudaArray(x)
+    # execute trmv!
+    CUBLAS.trmv!('U','N','N',d_A,d_x)
+    x = A*x
+    # compare
+    h_x = to_host(d_x)
+    @test_approx_eq(x,h_x)
+end
+test_trmv!(Float32)
+test_trmv!(Float64)
+test_trmv!(Complex64)
+test_trmv!(Complex128)
+
+#=
+# TODO: implement copy for CudaArray
+function test_trmv(elty)
+    # generate triangular matrix
+    A = rand(elty,m,m)
+    A = triu(A)
+    # generate vector
+    x = rand(elty,m)
+    # move to device
+    d_A = CudaArray(A)
+    d_x = CudaArray(x)
+    # execute trmv!
+    d_y = CUBLAS.trmv('U','N','N',d_A,d_x)
+    y = A*x
+    # compare
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_trmv(Float32)
+test_trmv(Float64)
+test_trmv(Complex64)
+test_trmv(Complex128)
+=#

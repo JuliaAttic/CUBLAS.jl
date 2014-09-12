@@ -571,8 +571,6 @@ for (fname, elty) in ((:cublasDtrmv_v2,:Float64),
                               cuuplo, cutrans, cudiag, n, A, lda, x, incx))
             x
         end
-        #=
-        # TODO: implement copy for CudaArray
         function trmv(uplo::BlasChar,
                       trans::BlasChar,
                       diag::BlasChar,
@@ -580,6 +578,5 @@ for (fname, elty) in ((:cublasDtrmv_v2,:Float64),
                       x::CudaVector{$elty})
             trmv!(uplo, trans, diag, A, copy(x))
         end
-        =#
     end
 end

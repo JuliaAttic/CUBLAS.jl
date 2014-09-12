@@ -568,8 +568,6 @@ test_trmv!(Float64)
 test_trmv!(Complex64)
 test_trmv!(Complex128)
 
-#=
-# TODO: implement copy for CudaArray
 function test_trmv(elty)
     # generate triangular matrix
     A = rand(elty,m,m)
@@ -590,4 +588,3 @@ test_trmv(Float32)
 test_trmv(Float64)
 test_trmv(Complex64)
 test_trmv(Complex128)
-=#

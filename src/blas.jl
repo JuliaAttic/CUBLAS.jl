@@ -622,3 +622,34 @@ for (fname, elty) in ((:cublasDtrsv_v2,:Float64),
         end
     end
 end
+
+### ger
+for (fname, elty) in ((:cublasDger_v2,:Float64),
+                      (:cublasSger_v2,:Float32),
+                      (:cublasZgerc_v2,:Complex128),
+                      (:cublasCgerc_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDger(
+        #   cublasHandle_t handle, int m, int n, const double *alpha,
+        #   const double *x, int incx,
+        #   const double *y, int incy,
+        #   double *A, int lda)
+        function ger!(alpha::$elty,
+                      x::CudaVector{$elty},
+                      y::CudaVector{$elty},
+                      A::CudaMatrix{$elty})
+            m, n = size(A)
+            m == length(x) || throw(DimensionMismatch(""))
+            n == length(y) || throw(DimensionMismatch(""))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            lda = max(1,stride(A,2))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Cint, Ptr{$elty},
+                              Ptr{$elty}, Cint, Ptr{$elty}, Cint, Ptr{$elty},
+                              Cint), cublashandle[1], m, n, [alpha], x, incx, y,
+                              incy, A, lda))
+            A
+        end
+    end
+end

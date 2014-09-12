@@ -42,7 +42,7 @@ CUBLAS functions:
 
 * [x] gbmv (in julia/blas.jl)
 * [x] gemv (in julia/blas.jl)
-* [ ] ger (in julia/blas.jl)
+* [x] ger (in julia/blas.jl)
 * [x] sbmv (in julia/blas.jl)
 * [ ] spmv
 * [ ] spr

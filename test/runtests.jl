@@ -634,3 +634,29 @@ test_trsv(Float32)
 test_trsv(Float64)
 test_trsv(Complex64)
 test_trsv(Complex128)
+
+#############
+# test ger! #
+#############
+
+function test_ger!(elty)
+    # construct matrix and vectors
+    A = rand(elty,m,n)
+    x = rand(elty,m)
+    y = rand(elty,n)
+    alpha = convert(elty,2)
+    # move to device
+    d_A = CudaArray(A)
+    d_x = CudaArray(x)
+    d_y = CudaArray(y)
+    # perform rank one update
+    CUBLAS.ger!(alpha,d_x,d_y,d_A)
+    A = (alpha*x)*y' + A
+    # move to host and compare
+    h_A = to_host(d_A)
+    @test_approx_eq(A,h_A)
+end
+test_ger!(Float32)
+test_ger!(Float64)
+test_ger!(Complex64)
+test_ger!(Complex128)

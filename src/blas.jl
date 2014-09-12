@@ -556,8 +556,7 @@ for (fname, elty) in ((:cublasDtrmv_v2,:Float64),
             m, n = size(A)
             if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
             if n != length(x)
-                throw(DimensionMismatch("length(x)=$(length(x))does not match
-                                        size(A)=$(size(A))"))
+                throw(DimensionMismatch("length(x)=$(length(x)) does not match size(A)=$(size(A))"))
             end
             cuuplo = cublasfill(uplo)
             cutrans = cublasop(trans)
@@ -577,6 +576,49 @@ for (fname, elty) in ((:cublasDtrmv_v2,:Float64),
                       A::CudaMatrix{$elty},
                       x::CudaVector{$elty})
             trmv!(uplo, trans, diag, A, copy(x))
+        end
+    end
+end
+
+### trsv, Triangular matrix-vector solve
+for (fname, elty) in ((:cublasDtrsv_v2,:Float64),
+                      (:cublasStrsv_v2,:Float32),
+                      (:cublasZtrsv_v2,:Complex128),
+                      (:cublasCtrsv_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDtrsv(
+        #   cublasHandle_t handle, cublasFillMode_t uplo,
+        #   cublasOperation_t trans, cublasDiagType_t diag,
+        #   int n, const double *A, int lda,
+        #   double *x, int incx)
+        function trsv!(uplo::BlasChar,
+                       trans::BlasChar,
+                       diag::BlasChar,
+                       A::CudaMatrix{$elty},
+                       x::CudaVector{$elty})
+            m, n = size(A)
+            if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
+            if n != length(x)
+                throw(DimensionMismatch("length(x)=$(length(x)) does not match size(A)=$(size(A))"))
+            end
+            cuuplo = cublasfill(uplo)
+            cutrans = cublasop(trans)
+            cudiag = cublasdiag(diag)
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasFillMode_t,
+                               cublasOperation_t, cublasDiagType_t, Cint,
+                               Ptr{$elty}, Cint, Ptr{$elty}, Cint), cublashandle[1],
+                              cuuplo, cutrans, cudiag, n, A, lda, x, incx))
+            x
+        end
+        function trsv(uplo::BlasChar,
+                      trans::BlasChar,
+                      diag::BlasChar,
+                      A::CudaMatrix{$elty},
+                      x::CudaVector{$elty})
+            trsv!(uplo, trans, diag, A, copy(x))
         end
     end
 end

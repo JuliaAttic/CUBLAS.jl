@@ -56,7 +56,7 @@ CUBLAS functions:
 * [ ] tpsv
 * [ ] trmv (in julia/blas.jl)
 * [ ] trsv (in julia/blas.jl)
-* [ ] hemv (in julia/blas.jl)
+* [*] hemv (in julia/blas.jl)
 * [ ] hbmv
 * [ ] hpmv
 * [ ] her (in julia/blas.jl)

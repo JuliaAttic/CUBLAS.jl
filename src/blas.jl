@@ -478,3 +478,44 @@ for (fname, elty) in ((:cublasZhemv_v2,:Complex128),
         end
     end
 end
+
+### sbmv, (SB) symmetric banded matrix-vector multiplication
+# cublas only has this for D and S
+# TODO: check in julia, blas may not have sbmv for C and Z!
+#= work in progress
+for (fname, elty) in ((:cublasDsbmv_v2,:Float64),
+                      (:cublasSsbmv_v2,:Float32))
+    @eval begin
+        # cublasStatus_t cublasDsbmv(
+        #   cublasHandle_t handle, cublasFillMode_t uplo,
+        #   int n, int k, const double *alpha, const double *A, int lda,
+        #   const double *x, int incx,
+        #   const double *beta, double *y, int incy)
+        function sbmv!(uplo::BlasChar,
+                       k::Integer,
+                       alpha::($elty),
+                       A::CudaMatrix{$elty},
+                       x::CudaVector{$elty},
+                       beta::($elty),
+                       y::CudaVector{$elty})
+            ccall(($(string(fname)),libblas), Void,
+                (Ptr{Uint8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
+                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
+                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
+                 &uplo, &size(A,2), &k, &alpha,
+                 A, &max(1,stride(A,2)), x, &stride(x,1),
+                 &beta, y, &stride(y,1))
+            y
+        end
+        function sbmv(uplo::BlasChar, k::Integer, alpha::($elty),
+                      A::CudaMatrix{$elty}, x::CudaVector{$elty})
+            n = size(A,2)
+            sbmv!(uplo, k, alpha, A, x, zero($elty), similar(x, $elty, n))
+        end
+        function sbmv(uplo::BlasChar, k::Integer, A::CudaMatrix{$elty},
+                      x::CudaVector{$elty})
+            sbmv(uplo, k, one($elty), A, x)
+        end
+    end
+end
+=#

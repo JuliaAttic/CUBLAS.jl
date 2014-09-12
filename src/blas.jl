@@ -653,3 +653,55 @@ for (fname, elty) in ((:cublasDger_v2,:Float64),
         end
     end
 end
+
+### syr
+# TODO: check calls in julia b/c blas may not define syr for Z and C
+for (fname, elty) in ((:cublasDsyr_v2,:Float64),
+                      (:cublasSsyr_v2,:Float32),
+                      (:cublasZsyr_v2,:Complex128),
+                      (:cublasCsyr_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDsyr(
+        #   cublasHandle_t handle, cublasFillMode_t uplo, int n,
+        #   const double *alpha, const double *x, int incx,
+        #   double *A, int lda)
+        function syr!(uplo::BlasChar,
+                      alpha::$elty,
+                      x::CudaVector{$elty},
+                      A::CudaMatrix{$elty})
+            cuuplo = cublasfill(uplo)
+            m, n = size(A)
+            m == n || throw(DimensionMismatch("Matrix A is $m by $n but must be square"))
+            length(x) == n || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
+            incx = stride(x,1)
+            lda = max(1,stride(A,2))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasFillMode_t, Cint,
+                              Ptr{$elty}, Ptr{$elty}, Cint, Ptr{$elty}, Cint),
+                              cublashandle[1], cuuplo, n, [alpha], x, incx, A,
+                              lda))
+            A
+        end
+    end
+end
+
+#=
+
+### her
+for (fname, elty) in ((:zher_,:Complex128),
+                      (:cher_,:Complex64))
+    @eval begin
+        function her!(uplo::Char, α::$elty, x::StridedVector{$elty}, A::StridedMatrix{$elty})
+            n = chksquare(A)
+            length(x) == A || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
+            ccall(($(string(fname)), libblas), Void,
+                (Ptr{Uint8}, Ptr{BlasInt}, Ptr{$elty}, Ptr{$elty},
+                 Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt}),
+                 &uplo, &n, &α, x,
+                 &1, A, &max(1,stride(A,2)))
+            A
+        end
+    end
+end
+
+=#

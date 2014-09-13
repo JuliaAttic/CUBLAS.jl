@@ -760,3 +760,52 @@ test_gemm(Float32)
 test_gemm(Float64)
 test_gemm(Complex64)
 test_gemm(Complex128)
+
+##############
+# test symm! #
+##############
+
+function test_symm!(elty)
+    # parameters
+    alpha = rand(elty)
+    beta = rand(elty)
+    # generate matrices
+    A = rand(elty,m,m)
+    A = A + A.'
+    B = rand(elty,m,n)
+    C = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    d_C = CudaArray(C)
+    # C = (alpha*A)*B + beta*C
+    CUBLAS.symm!('L','U',alpha,d_A,d_B,beta,d_C)
+    C = (alpha*A)*B + beta*C
+    # compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+test_symm!(Float32)
+test_symm!(Float64)
+test_symm!(Complex64)
+test_symm!(Complex128)
+
+function test_symm(elty)
+    # generate matrices
+    A = rand(elty,m,m)
+    A = A + A.'
+    B = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    # C = (alpha*A)*B + beta*C
+    d_C = CUBLAS.symm('L','U',d_A,d_B)
+    C = A*B
+    # compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+test_symm(Float32)
+test_symm(Float64)
+test_symm(Complex64)
+test_symm(Complex128)

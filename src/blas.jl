@@ -35,7 +35,7 @@ function cublasfill(uplo::BlasChar)
     throw("unknown cublas fill mode")
 end
 
-# convert BlasChar {} to cublasDiagType_t
+# convert BlasChar {U,N} to cublasDiagType_t
 function cublasdiag(diag::BlasChar)
     if diag == 'U'
         return CUBLAS_DIAG_UNIT
@@ -44,6 +44,17 @@ function cublasdiag(diag::BlasChar)
         return CUBLAS_DIAG_NON_UNIT
     end
     throw("unknown cublas diag mode")
+end
+
+# convert BlasChar {L,R}
+function cublasside(diag::BlasChar)
+    if diag == 'L'
+        return CUBLAS_SIDE_LEFT
+    end
+    if diag == 'R'
+        return CUBLAS_SIDE_RIGHT
+    end
+    throw("unknown cublas side mode")
 end
 
 # Level 1
@@ -764,6 +775,63 @@ for (fname, elty) in
                       A::CudaMatrix{$elty},
                       B::CudaMatrix{$elty})
             gemm(transA, transB, one($elty), A, B)
+        end
+    end
+end
+
+## (SY) symmetric matrix-matrix and matrix-vector multiplication
+for (fname, elty) in ((:cublasDsymm_v2,:Float64),
+                      (:cublasSsymm_v2,:Float32),
+                      (:cublasZsymm_v2,:Complex128),
+                      (:cublasCsymm_v2,:Complex64))
+    # TODO: fix julia dimension checks in symm!
+    @eval begin
+        # cublasStatus_t cublasDsymm(
+        #   cublasHandle_t handle, cublasSideMode_t side,
+        #   cublasFillMode_t uplo, int m, int n,
+        #   const double *alpha, const double *A, int lda,
+        #   const double *B, int ldb,
+        #   const double *beta, double *C, int ldc)
+        function symm!(side::BlasChar,
+                       uplo::BlasChar,
+                       alpha::($elty),
+                       A::CudaMatrix{$elty},
+                       B::CudaMatrix{$elty},
+                       beta::($elty),
+                       C::CudaMatrix{$elty})
+            cuside = cublasside(side)
+            cuuplo = cublasfill(uplo)
+            k, nA = size(A)
+            if k != nA throw(DimensionMismatch("Matrix A must be square")) end
+            m = side == 'L' ? k : size(B,1)
+            n = side == 'L' ? size(B,2) : k
+            if m != size(C,1) || n != size(C,2) || k != size(B, side == 'L' ? 1 : 2)
+                throw(DimensionMismatch(""))
+            end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasSideMode_t,
+                              cublasFillMode_t, Cint, Cint, Ptr{$elty},
+                              Ptr{$elty}, Cint, Ptr{$elty}, Cint, Ptr{$elty},
+                              Ptr{$elty}, Cint), cublashandle[1], cuside,
+                              cuuplo, m, n, [alpha], A, lda, B, ldb, [beta], C,
+                              ldc))
+            C
+        end
+        function symm(side::BlasChar,
+                      uplo::BlasChar,
+                      alpha::($elty),
+                      A::CudaMatrix{$elty},
+                      B::CudaMatrix{$elty})
+            symm!(side, uplo, alpha, A, B, zero($elty), similar(B))
+        end
+        function symm(side::BlasChar,
+                      uplo::BlasChar,
+                      A::CudaMatrix{$elty},
+                      B::CudaMatrix{$elty})
+            symm(side, uplo, one($elty), A, B)
         end
     end
 end

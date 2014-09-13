@@ -708,3 +708,62 @@ for (fname, elty) in ((:cublasZher_v2,:Complex128),
         end
     end
 end
+
+# Level 3
+## (GE) general matrix-matrix multiplication
+for (fname, elty) in
+        ((:cublasDgemm_v2,:Float64),
+         (:cublasSgemm_v2,:Float32),
+         (:cublasZgemm_v2,:Complex128),
+         (:cublasCgemm_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgemm(
+        #   cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
+        #   int m, int n, int k,
+        #   const double *alpha, const double *A, int lda,
+        #   const double *B, int ldb, const double *beta,
+        #   double *C, int ldc)
+        function gemm!(transA::BlasChar,
+                       transB::BlasChar,
+                       alpha::($elty),
+                       A::CudaVecOrMat{$elty},
+                       B::CudaVecOrMat{$elty},
+                       beta::($elty),
+                       C::CudaVecOrMat{$elty})
+            m = size(A, transA == 'N' ? 1 : 2)
+            k = size(A, transA == 'N' ? 2 : 1)
+            n = size(B, transB == 'N' ? 2 : 1)
+            if m != size(C,1) || n != size(C,2) || k != size(B, transB == 'N' ? 1 : 2)
+                throw(DimensionMismatch(""))
+            end
+            cutransA = cublasop(transA)
+            cutransB = cublasop(transB)
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasOperation_t,
+                              cublasOperation_t, Cint, Cint, Cint, Ptr{$elty},
+                              Ptr{$elty}, Cint, Ptr{$elty}, Cint, Ptr{$elty},
+                              Ptr{$elty}, Cint), cublashandle[1], cutransA,
+                              cutransB, m, n, k, [alpha], A, lda, B, ldb, [beta],
+                              C, ldc))
+            C
+        end
+        function gemm(transA::BlasChar,
+                      transB::BlasChar,
+                      alpha::($elty),
+                      A::CudaMatrix{$elty},
+                      B::CudaMatrix{$elty})
+            gemm!(transA, transB, alpha, A, B, zero($elty),
+                  similar(B, $elty, (size(A, transA == 'N' ? 1 : 2),
+                                     size(B, transB == 'N' ? 2 : 1))))
+        end
+        function gemm(transA::BlasChar,
+                      transB::BlasChar,
+                      A::CudaMatrix{$elty},
+                      B::CudaMatrix{$elty})
+            gemm(transA, transB, one($elty), A, B)
+        end
+    end
+end

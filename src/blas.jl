@@ -835,3 +835,51 @@ for (fname, elty) in ((:cublasDsymm_v2,:Float64),
         end
     end
 end
+
+## syrk
+for (fname, elty) in ((:cublasDsyrk_v2,:Float64),
+                      (:cublasSsyrk_v2,:Float32),
+                      (:cublasZsyrk_v2,:Complex128),
+                      (:cublasCsyrk_v2,:Complex64))
+   @eval begin
+       # cublasStatus_t cublasDsyrk(
+       #   cublasHandle_t handle, cublasFillMode_t uplo,
+       #   cublasOperation_t trans, int n, int k,
+       #   const double *alpha, const double *A, int lda,
+       #   const double *beta, double *C, int ldc)
+       function syrk!(uplo::BlasChar,
+                      trans::BlasChar,
+                      alpha::($elty),
+                      A::CudaVecOrMat{$elty},
+                      beta::($elty),
+                      C::CudaMatrix{$elty})
+           cuuplo = cublasfill(uplo)
+           cutrans = cublasop(trans)
+           mC, n = size(C)
+           if mC != n throw(DimensionMismatch("C must be square")) end
+           nn = size(A, trans == 'N' ? 1 : 2)
+           if nn != n throw(DimensionMismatch("syrk!")) end
+           k  = size(A, trans == 'N' ? 2 : 1)
+           # TODO: replace following with call to cublas
+           ccall(($(string(fname)),libblas), Void,
+                 (Ptr{Uint8}, Ptr{Uint8}, Ptr{BlasInt}, Ptr{BlasInt},
+                  Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty},
+                  Ptr{$elty}, Ptr{BlasInt}),
+                 &uplo, &trans, &n, &k,
+                 &alpha, A, &max(1,stride(A,2)), &beta,
+                 C, &max(1,stride(C,2)))
+            C
+        end
+    end
+end
+function syrk(uplo::BlasChar,
+              trans::BlasChar,
+              alpha::Number,
+              A::StridedVecOrMat)
+    T = eltype(A)
+    n = size(A, trans == 'N' ? 1 : 2)
+    syrk!(uplo, trans, convert(T,alpha), A, zero(T), similar(A, T, (n, n)))
+end
+syrk(uplo::BlasChar, trans::BlasChar, A::StridedVecOrMat) = syrk(uplo, trans,
+                                                                 one(eltype(A)),
+                                                                 A)

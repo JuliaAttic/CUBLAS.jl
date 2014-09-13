@@ -713,3 +713,50 @@ function test_her!(elty)
 end
 test_her!(Complex64)
 test_her!(Complex128)
+
+##############
+# test gemm! #
+##############
+
+function test_gemm!(elty)
+    # parameters
+    alpha = rand(elty)
+    beta = rand(elty)
+    # generate matrices
+    A = rand(elty,m,k)
+    B = rand(elty,k,n)
+    C = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    d_C = CudaArray(C)
+    # C = (alpha*A)*B + beta*C
+    CUBLAS.gemm!('N','N',alpha,d_A,d_B,beta,d_C)
+    C = (alpha*A)*B + beta*C
+    # compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+test_gemm!(Float32)
+test_gemm!(Float64)
+test_gemm!(Complex64)
+test_gemm!(Complex128)
+
+function test_gemm(elty)
+    # generate matrices
+    A = rand(elty,m,k)
+    B = rand(elty,k,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    # C = (alpha*A)*B + beta*C
+    d_C = CUBLAS.gemm('N','N',d_A,d_B)
+    C = A*B
+    # compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+test_gemm(Float32)
+test_gemm(Float64)
+test_gemm(Complex64)
+test_gemm(Complex128)

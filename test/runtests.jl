@@ -809,3 +809,51 @@ test_symm(Float32)
 test_symm(Float64)
 test_symm(Complex64)
 test_symm(Complex128)
+
+##############
+# test syrk! #
+##############
+
+function test_syrk!(elty)
+    # generate matrices
+    A = rand(elty,m,k)
+    C = rand(elty,m,m)
+    C = C + C.'
+    # parameters
+    alpha = rand(elty)
+    beta = rand(elty)
+    # move to device
+    d_A = CudaArray(A)
+    d_C = CudaArray(C)
+    # C = (alpha*A)*A.' + beta*C
+    CUBLAS.syrk!('U','N',alpha,d_A,beta,d_C)
+    C = (alpha*A)*A.' + beta*C
+    C = triu(C)
+    # move to host and compare
+    h_C = to_host(d_C)
+    h_C = triu(C)
+    @test_approx_eq(C,h_C)
+end
+test_syrk!(Float32)
+test_syrk!(Float64)
+test_syrk!(Complex64)
+test_syrk!(Complex128)
+
+function test_syrk(elty)
+    # generate matrices
+    A = rand(elty,m,k)
+    # move to device
+    d_A = CudaArray(A)
+    # C = A*A.'
+    d_C = CUBLAS.syrk('U','N',d_A)
+    C = A*A.'
+    C = triu(C)
+    # move to host and compare
+    h_C = to_host(d_C)
+    h_C = triu(C)
+    @test_approx_eq(C,h_C)
+end
+test_syrk(Float32)
+test_syrk(Float64)
+test_syrk(Complex64)
+test_syrk(Complex128)

@@ -860,14 +860,14 @@ for (fname, elty) in ((:cublasDsyrk_v2,:Float64),
            nn = size(A, trans == 'N' ? 1 : 2)
            if nn != n throw(DimensionMismatch("syrk!")) end
            k  = size(A, trans == 'N' ? 2 : 1)
-           # TODO: replace following with call to cublas
-           ccall(($(string(fname)),libblas), Void,
-                 (Ptr{Uint8}, Ptr{Uint8}, Ptr{BlasInt}, Ptr{BlasInt},
-                  Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty},
-                  Ptr{$elty}, Ptr{BlasInt}),
-                 &uplo, &trans, &n, &k,
-                 &alpha, A, &max(1,stride(A,2)), &beta,
-                 C, &max(1,stride(C,2)))
+           lda = max(1,stride(A,2))
+           ldc = max(1,stride(C,2))
+           statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                             (cublasHandle_t, cublasFillMode_t,
+                             cublasOperation_t, Cint, Cint, Ptr{$elty},
+                             Ptr{$elty}, Cint, Ptr{$elty}, Ptr{$elty}, Cint),
+                             cublashandle[1], cuuplo, cutrans, n, k, [alpha], A,
+                             lda, [beta], C, ldc))
             C
         end
     end
@@ -875,11 +875,11 @@ end
 function syrk(uplo::BlasChar,
               trans::BlasChar,
               alpha::Number,
-              A::StridedVecOrMat)
+              A::CudaVecOrMat)
     T = eltype(A)
     n = size(A, trans == 'N' ? 1 : 2)
     syrk!(uplo, trans, convert(T,alpha), A, zero(T), similar(A, T, (n, n)))
 end
-syrk(uplo::BlasChar, trans::BlasChar, A::StridedVecOrMat) = syrk(uplo, trans,
-                                                                 one(eltype(A)),
-                                                                 A)
+syrk(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat) = syrk(uplo, trans,
+                                                              one(eltype(A)),
+                                                              A)

@@ -71,7 +71,7 @@ CUBLAS functions:
 * [x] gemm (in julia/blas.jl)
 * [ ] gemmBatched
 * [x] symm (in julia/blas.jl)
-* [ ] syrk (in julia/blas.jl)
+* [x] syrk (in julia/blas.jl)
 * [ ] syr2k (in julia/blas.jl)
 * [ ] syrkx
 * [ ] trmm (in julia/blas.jl)

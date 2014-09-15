@@ -857,3 +857,23 @@ test_syrk(Float32)
 test_syrk(Float64)
 test_syrk(Complex64)
 test_syrk(Complex128)
+
+###############
+# test syr2k! #
+###############
+
+# TODO: finish this test!
+function test_syr2k!(elty)
+    # generate parameters
+    alpha = rand(elty)
+    beta = rand(elty)
+    # generate matrices
+    A = rand(elty,m,k)
+    B = rand(elty,n,k)
+    C = rand(elty,m,m)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    d_C = CudaArray(C)
+    # compute
+end

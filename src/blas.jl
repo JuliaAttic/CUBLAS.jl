@@ -883,3 +883,59 @@ end
 syrk(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat) = syrk(uplo, trans,
                                                               one(eltype(A)),
                                                               A)
+
+## syr2k
+for (fname, elty) in ((:cublasSsyr2k_v2,:Float64),
+                      (:cublasSsyr2k_v2,:Float32),
+                      (:cublasZsyr2k_v2,:Complex128),
+                      (:cublasCsyr2k_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDsyr2k(
+        #   cublasHandle_t handle,
+        #   cublasFillMode_t uplo, cublasOperation_t trans,
+        #   int n, int k,
+        #   const double *alpha,
+        #   const double *A, int lda,
+        #   const double *B, int ldb,
+        #   const double *beta,
+        #   double *C, int ldc)
+        function syr2k!(uplo::BlasChar,
+                        trans::BlasChar,
+                        alpha::($elty),
+                        A::CudaVecOrMat{$elty},
+                        B::CudaVecOrMat{$elty},
+                        beta::($elty),
+                        C::CudaMatrix{$elty})
+            cuuplo = cublasfill(uplo)
+            cutrans = cublasop(trans)
+            mC, nC = size(C)
+            if mC != nC throw(DimensionMismatch("C must be square")) end
+            nn = size(A, trans == 'N' ? 1 : 2)
+            if nn != n throw(DimensionMismatch("syr2k!")) end
+            k  = size(A, trans == 'N' ? 2 : 1)
+            # TODO: check size of B in julia (syr2k!)
+            if size(A,2) != size(B,2) throw(DimensionMismatch("syr2k!")) end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasFillMode_t,
+                              cublasOperation_t, Cint, Cint, Ptr{$elty},
+                              Ptr{$elty}, Cint, Ptr{$elty}, Cint, Ptr{$elty},
+                              Ptr{$elty}, Cint), cublashandle[1], cuuplo,
+                              cutrans, n, k, [alpha], A, lda, B, ldb, [beta], C,
+                              ldc))
+            C
+        end
+    end
+end
+function syr2k(uplo::BlasChar,
+               trans::BlasChar,
+               alpha::Number,
+               A::CudaVecOrMat,
+               B::CudaVecOrMat)
+    T = eltype(A)
+    n = size(A, trans == 'N' ? 1 : 2)
+    syr2k!(uplo, trans, convert(T,alpha), A, B, zero(T), similar(A, T, (n, n)))
+end
+syr2k(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat, B::CudaVecOrMat) = syr2k(uplo, trans, one(eltype(A)), A, B)

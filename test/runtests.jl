@@ -862,18 +862,65 @@ test_syrk(Complex128)
 # test syr2k! #
 ###############
 
-# TODO: finish this test!
 function test_syr2k!(elty)
+    #local m = 3
+    #local k = 1
     # generate parameters
     alpha = rand(elty)
     beta = rand(elty)
     # generate matrices
     A = rand(elty,m,k)
-    B = rand(elty,n,k)
+    B = rand(elty,m,k)
     C = rand(elty,m,m)
+    C = C + C.'
     # move to device
     d_A = CudaArray(A)
     d_B = CudaArray(B)
     d_C = CudaArray(C)
     # compute
+    #C = alpha*(A*B.') + conj(alpha)*(B*A.') + beta*C
+    C = alpha*(A*B.' + B*A.') + beta*C
+    CUBLAS.syr2k!('U','N',alpha,d_A,d_B,beta,d_C)
+    # move back to host and compare
+    C = triu(C)
+    h_C = to_host(d_C)
+    h_C = triu(h_C)
+
+    #println("elty: $elty")
+    #println("C:")
+    #show(C)
+    #println()
+    #println("h_C:")
+    #show(h_C)
+    #println()
+
+    @test_approx_eq(C,h_C)
 end
+test_syr2k!(Float32)
+test_syr2k!(Float64)
+test_syr2k!(Complex64)
+test_syr2k!(Complex128)
+
+function test_syr2k(elty)
+    # generate parameters
+    alpha = rand(elty)
+    # generate matrices
+    A = rand(elty,m,k)
+    B = rand(elty,m,k)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    # compute
+    #C = alpha*(A*B.') + conj(alpha)*(B*A.') + beta*C
+    C = alpha*(A*B.' + B*A.')
+    d_C = CUBLAS.syr2k('U','N',alpha,d_A,d_B)
+    # move back to host and compare
+    C = triu(C)
+    h_C = to_host(d_C)
+    h_C = triu(h_C)
+    @test_approx_eq(C,h_C)
+end
+test_syr2k(Float32)
+test_syr2k(Float64)
+test_syr2k(Complex64)
+test_syr2k(Complex128)

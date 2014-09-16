@@ -885,7 +885,7 @@ syrk(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat) = syrk(uplo, trans,
                                                               A)
 
 ## syr2k
-for (fname, elty) in ((:cublasSsyr2k_v2,:Float64),
+for (fname, elty) in ((:cublasDsyr2k_v2,:Float64),
                       (:cublasSsyr2k_v2,:Float32),
                       (:cublasZsyr2k_v2,:Complex128),
                       (:cublasCsyr2k_v2,:Complex64))
@@ -906,15 +906,18 @@ for (fname, elty) in ((:cublasSsyr2k_v2,:Float64),
                         B::CudaVecOrMat{$elty},
                         beta::($elty),
                         C::CudaMatrix{$elty})
+            # TODO: check size of B in julia (syr2k!)
             cuuplo = cublasfill(uplo)
             cutrans = cublasop(trans)
-            mC, nC = size(C)
-            if mC != nC throw(DimensionMismatch("C must be square")) end
-            nn = size(A, trans == 'N' ? 1 : 2)
-            if nn != n throw(DimensionMismatch("syr2k!")) end
+            m, n = size(C)
+            if m != n throw(DimensionMismatch("C must be square")) end
+            nA = size(A, trans == 'N' ? 1 : 2)
+            nB = size(B, trans == 'N' ? 1 : 2)
+            if nA != n throw(DimensionMismatch("First dimension of op(A) must match C")) end
+            if nB != n throw(DimensionMismatch("First dimension of op(B.') must match C")) end
             k  = size(A, trans == 'N' ? 2 : 1)
-            # TODO: check size of B in julia (syr2k!)
-            if size(A,2) != size(B,2) throw(DimensionMismatch("syr2k!")) end
+            if k != size(B, trans == 'N' ? 2 : 1) throw(DimensionMismatch(
+                "Inner dimensions of op(A) and op(B.') must match")) end
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))

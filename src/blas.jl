@@ -884,6 +884,46 @@ syrk(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat) = syrk(uplo, trans,
                                                               one(eltype(A)),
                                                               A)
 
+## herk
+for (fname, elty) in ((:cublasZherk_v2,:Complex128),
+                      (:cublasCherk_v2,:Complex64))
+   @eval begin
+       # cublasStatus_t cublasCherk(
+       #   cublasHandle_t handle, cublasFillMode_t uplo, cublasOperation_t trans,
+       #   int n, int k,
+       #   const float *alpha, const cuComplex *A, int lda,
+       #   const float *beta, cuComplex *C, int ldc)
+       function herk!(uplo::BlasChar,
+                      trans::BlasChar,
+                      alpha::($elty),
+                      A::CudaVecOrMat{$elty},
+                      beta::($elty),
+                      C::CudaMatrix{$elty})
+           cuuplo = cublasfill(uplo)
+           cutrans = cublasop(trans)
+           mC, n = size(C)
+           if mC != n throw(DimensionMismatch("C must be square")) end
+           nn = size(A, trans == 'N' ? 1 : 2)
+           if nn != n throw(DimensionMismatch("syrk!")) end
+           k  = size(A, trans == 'N' ? 2 : 1)
+           lda = max(1,stride(A,2))
+           ldc = max(1,stride(C,2))
+           statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                             (cublasHandle_t, cublasFillMode_t,
+                             cublasOperation_t, Cint, Cint, Ptr{$elty},
+                             Ptr{$elty}, Cint, Ptr{$elty}, Ptr{$elty}, Cint),
+                             cublashandle[1], cuuplo, cutrans, n, k, [alpha], A,
+                             lda, [beta], C, ldc))
+           C
+       end
+       function herk(uplo::BlasChar, trans::BlasChar, alpha::($elty), A::CudaVecOrMat{$elty})
+           n = size(A, trans == 'N' ? 1 : 2)
+           herk!(uplo, trans, alpha, A, zero($elty), similar(A, $elty, (n,n)))
+       end
+       herk(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat{$elty}) = herk(uplo, trans, one($elty), A)
+   end
+end
+
 ## syr2k
 for (fname, elty) in ((:cublasDsyr2k_v2,:Float64),
                       (:cublasSsyr2k_v2,:Float32),

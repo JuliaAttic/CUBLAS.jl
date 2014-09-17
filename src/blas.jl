@@ -942,3 +942,59 @@ function syr2k(uplo::BlasChar,
     syr2k!(uplo, trans, convert(T,alpha), A, B, zero(T), similar(A, T, (n, n)))
 end
 syr2k(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat, B::CudaVecOrMat) = syr2k(uplo, trans, one(eltype(A)), A, B)
+
+## her2k
+for (fname, elty1, elty2) in ((:cublasZher2k_v2,:Complex128,:Float64),
+                              (:cublasCher2k_v2,:Complex64,:Float32))
+   @eval begin
+       # cublasStatus_t cublasZher2k(
+       #   cublasHandle_t handle, cublasFillMode_t uplo, cublasOperation_t trans,
+       #   int n, int k,
+       #   const cuDoubleComplex *alpha, const cuDoubleComplex *A, int lda,
+       #   const cuDoubleComplex *B, int ldb,
+       #   const double *beta, cuDoubleComplex *C, int ldc)
+       function her2k!(uplo::BlasChar,
+                       trans::BlasChar,
+                       alpha::($elty1),
+                       A::CudaVecOrMat{$elty1},
+                       B::CudaVecOrMat{$elty1},
+                       beta::($elty2),
+                       C::CudaMatrix{$elty1})
+           # TODO: check size of B in julia (her2k!)
+           cuuplo = cublasfill(uplo)
+           cutrans = cublasop(trans)
+           m, n = size(C)
+           if m != n throw(DimensionMismatch("C must be square")) end
+           nA = size(A, trans == 'N' ? 1 : 2)
+           nB = size(B, trans == 'N' ? 1 : 2)
+           if nA != n throw(DimensionMismatch("First dimension of op(A) must match C")) end
+           if nB != n throw(DimensionMismatch("First dimension of op(B.') must match C")) end
+           k  = size(A, trans == 'N' ? 2 : 1)
+           if k != size(B, trans == 'N' ? 2 : 1)
+               throw(DimensionMismatch("Inner dimensions of op(A) and op(B.') must match"))
+           end
+           lda = max(1,stride(A,2))
+           ldb = max(1,stride(B,2))
+           ldc = max(1,stride(C,2))
+           statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                             (cublasHandle_t, cublasFillMode_t,
+                             cublasOperation_t, Cint, Cint, Ptr{$elty1},
+                             Ptr{$elty1}, Cint, Ptr{$elty1}, Cint, Ptr{$elty2},
+                             Ptr{$elty1}, Cint), cublashandle[1], cuuplo, cutrans, n, k,
+                             [alpha], A, lda, B, ldb, [beta], C, ldc))
+           C
+       end
+       function her2k(uplo::BlasChar,
+                      trans::BlasChar,
+                      alpha::($elty1),
+                      A::CudaVecOrMat{$elty1},
+                      B::CudaVecOrMat{$elty1})
+           n = size(A, trans == 'N' ? 1 : 2)
+           her2k!(uplo, trans, alpha, A, B, zero($elty2), similar(A, $elty1, (n,n)))
+       end
+       her2k(uplo::BlasChar,
+             trans::BlasChar,
+             A::CudaVecOrMat{$elty1},
+             B::CudaVecOrMat{$elty1}) = her2k(uplo, trans, one($elty1), A, B)
+   end
+end

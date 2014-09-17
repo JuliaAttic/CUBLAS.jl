@@ -924,3 +924,52 @@ test_syr2k(Float32)
 test_syr2k(Float64)
 test_syr2k(Complex64)
 test_syr2k(Complex128)
+
+###############
+# test her2k! #
+###############
+
+function test_her2k!(elty1,elty2)
+    # generate parameters
+    alpha = rand(elty1)
+    beta = rand(elty2)
+    # generate matrices
+    A = rand(elty1,m,k)
+    B = rand(elty1,m,k)
+    C = rand(elty1,m,m)
+    C = C + C'
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    d_C = CudaArray(C)
+    # compute
+    #C = alpha*(A*B') + conj(alpha)*(B*A') + beta*C
+    C = alpha*(A*B') + conj(alpha)*(B*A') + beta*C
+    CUBLAS.her2k!('U','N',alpha,d_A,d_B,beta,d_C)
+    # move back to host and compare
+    C = triu(C)
+    h_C = to_host(d_C)
+    h_C = triu(h_C)
+    @test_approx_eq(C,h_C)
+end
+test_her2k!(Complex64,Float32)
+test_her2k!(Complex128,Float64)
+
+function test_her2k(elty1)
+    # generate matrices
+    A = rand(elty1,m,k)
+    B = rand(elty1,m,k)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    # compute
+    C = A*B' + B*A'
+    d_C = CUBLAS.her2k('U','N',d_A,d_B)
+    # move back to host and compare
+    C = triu(C)
+    h_C = to_host(d_C)
+    h_C = triu(h_C)
+    @test_approx_eq(C,h_C)
+end
+test_her2k(Complex64)
+test_her2k(Complex128)

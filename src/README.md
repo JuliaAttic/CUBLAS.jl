@@ -79,7 +79,7 @@ CUBLAS functions:
 * [ ] trsmBatched
 * [ ] hemm
 * [ ] herk (in julia/blas.jl)
-* [ ] her2k (in julia/blas.jl)
+* [x] her2k (in julia/blas.jl)
 * [ ] herkx
 
 ## BLAS-like extensions

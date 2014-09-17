@@ -74,8 +74,8 @@ CUBLAS functions:
 * [x] syrk (in julia/blas.jl)
 * [x] syr2k (in julia/blas.jl)
 * [ ] syrkx
-* [ ] trmm (in julia/blas.jl)
-* [ ] trsm (in julia/blas.jl)
+* [x] trmm (in julia/blas.jl)
+* [x] trsm (in julia/blas.jl)
 * [ ] trsmBatched
 * [ ] hemm
 * [x] herk (in julia/blas.jl)

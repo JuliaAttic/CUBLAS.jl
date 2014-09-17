@@ -1017,3 +1017,101 @@ function test_her2k(elty1)
 end
 test_her2k(Complex64)
 test_her2k(Complex128)
+
+##############
+# test trmm! #
+##############
+
+function test_trmm!(elty)
+    # generate parameter
+    alpha = rand(elty)
+    # generate matrices
+    A = rand(elty,m,m)
+    A = triu(A)
+    B = rand(elty,m,n)
+    C = zeros(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    d_C = CudaArray(C)
+    # compute
+    C = alpha*A*B
+    CUBLAS.trmm!('L','U','N','N',alpha,d_A,d_B,d_C)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+test_trmm!(Float32)
+test_trmm!(Float64)
+test_trmm!(Complex64)
+test_trmm!(Complex128)
+
+function test_trmm(elty)
+    # generate parameter
+    alpha = rand(elty)
+    # generate matrices
+    A = rand(elty,m,m)
+    A = triu(A)
+    B = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    # compute
+    C = alpha*A*B
+    d_C = CUBLAS.trmm('L','U','N','N',alpha,d_A,d_B)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+test_trmm(Float32)
+test_trmm(Float64)
+test_trmm(Complex64)
+test_trmm(Complex128)
+
+##############
+# test trsm! #
+##############
+
+function test_trsm!(elty)
+    # generate parameter
+    alpha = rand(elty)
+    # generate matrices
+    A = rand(elty,m,m)
+    A = triu(A)
+    B = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    # compute
+    B = alpha*(A\B)
+    CUBLAS.trsm!('L','U','N','N',alpha,d_A,d_B)
+    # move to host and compare
+    h_B = to_host(d_B)
+    @test_approx_eq(B,h_B)
+end
+test_trsm!(Float32)
+test_trsm!(Float64)
+test_trsm!(Complex64)
+test_trsm!(Complex128)
+
+function test_trsm(elty)
+    # generate parameter
+    alpha = rand(elty)
+    # generate matrices
+    A = rand(elty,m,m)
+    A = triu(A)
+    B = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    # compute
+    C = alpha*(A\B)
+    d_C = CUBLAS.trsm('L','U','N','N',alpha,d_A,d_B)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+test_trsm(Float32)
+test_trsm(Float64)
+test_trsm(Complex64)
+test_trsm(Complex128)

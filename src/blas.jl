@@ -1038,3 +1038,108 @@ for (fname, elty1, elty2) in ((:cublasZher2k_v2,:Complex128,:Float64),
              B::CudaVecOrMat{$elty1}) = her2k(uplo, trans, one($elty1), A, B)
    end
 end
+
+## (TR) Triangular matrix and vector multiplication and solution
+for (mmname, smname, elty) in
+        ((:cublasDtrmm_v2,:cublasDtrsm_v2,:Float64),
+         (:cublasStrmm_v2,:cublasStrsm_v2,:Float32),
+         (:cublasZtrmm_v2,:cublasZtrsm_v2,:Complex128),
+         (:cublasCtrmm_v2,:cublasCtrsm_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDtrmm(cublasHandle_t handle,
+        #   cublasSideMode_t side, cublasFillMode_t uplo,
+        #   cublasOperation_t trans, cublasDiagType_t diag,
+        #   int m, int n,
+        #   const double *alpha, const double *A, int lda,
+        #   const double *B, int ldb,
+        #   double *C, int ldc)
+        # Note: CUBLAS differs from BLAS API for trmm
+        #   BLAS: inplace modification of B
+        #   CUBLAS: store result in C
+        function trmm!(side::BlasChar,
+                       uplo::BlasChar,
+                       transa::BlasChar,
+                       diag::BlasChar,
+                       alpha::($elty),
+                       A::CudaMatrix{$elty},
+                       B::CudaMatrix{$elty},
+                       C::CudaMatrix{$elty})
+            cuside = cublasside(side)
+            cuuplo = cublasfill(uplo)
+            cutransa = cublasop(transa)
+            cudiag = cublasdiag(diag)
+            m, n = size(B)
+            mA, nA = size(A)
+            # TODO: clean up error messages
+            if mA != nA throw(DimensionMistmatch("A must be square")) end
+            if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trmm!")) end
+            mC, nC = size(C)
+            if mC != m || nC != n throw(DimensionMismatch("trmm!")) end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            statuscheck(ccall(($(string(mmname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasSideMode_t,
+                              cublasFillMode_t, cublasOperation_t,
+                              cublasDiagType_t, Cint, Cint, Ptr{$elty},
+                              Ptr{$elty}, Cint, Ptr{$elty}, Cint, Ptr{$elty},
+                              Cint), cublashandle[1], cuside, cuuplo, cutransa,
+                              cudiag, m, n, [alpha], A, lda, B, ldb, C, ldc))
+            C
+        end
+        function trmm(side::BlasChar,
+                      uplo::BlasChar,
+                      transa::BlasChar,
+                      diag::BlasChar,
+                      alpha::($elty),
+                      A::CudaMatrix{$elty},
+                      B::CudaMatrix{$elty})
+            trmm!(side, uplo, transa, diag, alpha, A, B, similar(B))
+        end
+        # cublasStatus_t cublasDtrsm(cublasHandle_t handle,
+        #   cublasSideMode_t side, cublasFillMode_t uplo,
+        #   cublasOperation_t trans, cublasDiagType_t diag,
+        #   int m, int n,
+        #   const double *alpha,
+        #   const double *A, int lda,
+        #   double *B, int ldb)
+        function trsm!(side::BlasChar,
+                       uplo::BlasChar,
+                       transa::BlasChar,
+                       diag::BlasChar,
+                       alpha::($elty),
+                       A::CudaMatrix{$elty},
+                       B::CudaMatrix{$elty})
+            cuside = cublasside(side)
+            cuuplo = cublasfill(uplo)
+            cutransa = cublasop(transa)
+            cudiag = cublasdiag(diag)
+            m, n = size(B)
+            mA, nA = size(A)
+            # TODO: clean up error messages
+            if mA != nA throw(DimensionMistmatch("A must be square")) end
+            if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trsm!")) end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            statuscheck(ccall(($(string(smname)), libcublas), cublasStatus_t,
+                               (cublasHandle_t, cublasSideMode_t,
+                               cublasFillMode_t, cublasOperation_t,
+                               cublasDiagType_t, Cint, Cint, Ptr{$elty},
+                               Ptr{$elty}, Cint, Ptr{$elty}, Cint),
+                               cublashandle[1], cuside, cuuplo, cutransa, cudiag,
+                               m, n, [alpha], A, lda, B, ldb))
+            B
+        end
+        function trsm(side::BlasChar,
+                      uplo::BlasChar,
+                      transa::BlasChar,
+                      diag::BlasChar,
+                      alpha::($elty),
+                      A::CudaMatrix{$elty},
+                      B::CudaMatrix{$elty})
+            trsm!(side, uplo, transa, diag, alpha, A, copy(B))
+        end
+    end
+end
+# TODO: julia, tr{m,s}m, Char -> BlasChar
+# TODO: julia, trmm!, alpha::Number -> alpha::$elty

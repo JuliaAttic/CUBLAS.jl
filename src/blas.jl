@@ -98,7 +98,7 @@ for (fname, elty) in ((:cublasDscal_v2,:Float64),
         end
     end
 end
-# TODO: implement copy{T}(x::CudaArray{T})
+# TODO: uncomment and test the following method
 #scal{T}(n::Integer, DA::T, DX::CudaArray{T}, incx::Integer) = scal!(n, DA, copy(DX), incx)
 # In case DX is complex, and DA is real, use dscal/sscal to save flops
 for (fname, elty, celty) in ((:cublasSscal_v2, :Float32, :Complex64),

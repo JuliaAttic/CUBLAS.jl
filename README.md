@@ -1,4 +1,4 @@
-# CUBLAS
+# CUBLAS.jl
 
 [![Build Status](https://travis-ci.org/JuliaGPU/CUBLAS.jl.svg?branch=master)](https://travis-ci.org/JuliaGPU/CUBLAS.jl)
 

@@ -8,11 +8,12 @@
 #
 
 module CUBLAS
+importall Base.LinAlg.BLAS
 
 using CUDArt
 #using CUDArt.CudaPtr
 
-import Base.LinAlg.BlasChar
+typealias BlasChar Char #import Base.LinAlg.BlasChar
 import Base.one
 import Base.zero
 

@@ -912,6 +912,56 @@ syrk(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat) = syrk(uplo, trans,
                                                               one(eltype(A)),
                                                               A)
 
+## hemm
+for (fname, elty) in ((:cublasZhemm_v2,:Complex128),
+                      (:cublasChemm_v2,:Complex64))
+   @eval begin
+       # cublasStatus_t cublasChemm(
+       #   cublasHandle_t handle, cublasSideMode_t side, cublasFillMode_t uplo,
+       #   int m, int n,
+       #   const cuComplex *alpha,
+       #   const cuComplex *A, int lda,
+       #   const cuComplex *B, int ldb,
+       #   const cuComplex *beta,
+       #   cuComplex *C, int ldc)
+       function hemm!(side::BlasChar,
+                      uplo::BlasChar,
+                      alpha::($elty),
+                      A::CudaMatrix{$elty},
+                      B::CudaMatrix{$elty},
+                      beta::($elty),
+                      C::CudaMatrix{$elty})
+           cuside = cublasside(side)
+           cuuplo = cublasfill(uplo)
+           mA, nA = size(A)
+           m, n = size(B)
+           mC, nC = size(C)
+           if mA != nA throw(DimensionMismatch("A must be square")) end
+           if ((m != mC) || (n != nC)) throw(DimensionMismatch("B and C must have same dimensions")) end
+           if ((side == 'L') && (mA != m)) throw(DimensionMismatch("")) end
+           if ((side == 'R') && (mA != n)) throw(DimensionMismatch("")) end
+           lda = max(1,stride(A,2))
+           ldb = max(1,stride(B,2))
+           ldc = max(1,stride(C,2))
+           statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                             (cublasHandle_t, cublasSideMode_t, cublasFillMode_t,
+                             Cint, Cint, Ptr{$elty}, Ptr{$elty}, Cint, Ptr{$elty},
+                             Cint, Ptr{$elty}, Ptr{$elty}, Cint), cublashandle[1],
+                             cuside, cuuplo, m, n, [alpha], A, lda, B, ldb, [beta], C, ldc))
+           C
+       end
+       function hemm(uplo::BlasChar,
+                     trans::BlasChar,
+                     alpha::($elty),
+                     A::CudaMatrix{$elty},
+                     B::CudaMatrix{$elty})
+           m,n = size(B)
+           hemm!( uplo, trans, alpha, A, B, zero($elty), similar(B, $elty, (m,n) ) )
+       end
+       hemm( uplo::BlasChar, trans::BlasChar, A::CudaMatrix{$elty}, B::CudaMatrix{$elty}) = hemm( uplo, trans, one($elty), A, B)
+    end
+end
+
 ## herk
 for (fname, elty) in ((:cublasZherk_v2,:Complex128),
                       (:cublasCherk_v2,:Complex64))

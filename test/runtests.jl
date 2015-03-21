@@ -1144,3 +1144,53 @@ test_trsm(Float32)
 test_trsm(Float64)
 test_trsm(Complex64)
 test_trsm(Complex128)
+
+##############
+# test hemm! #
+##############
+
+function test_hemm!(elty)
+    # generate parameters
+    alpha = rand(elty)
+    beta  = rand(elty)
+    # generate matrices
+    A = rand(elty,m,m)
+    A = A + ctranspose(A)
+    @test ishermitian(A)
+    B = rand(elty,m,n)
+    C = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    d_C = CudaArray(C)
+    # compute
+    C = alpha*(A*B) + beta*C
+    CUBLAS.hemm!('L','L',alpha,d_A,d_B,beta,d_C)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+
+test_hemm!(Complex64)
+test_hemm!(Complex128)
+
+function test_hemm(elty)
+    # generate parameter
+    alpha = rand(elty)
+    # generate matrices
+    A = rand(elty,m,m)
+    A = A + ctranspose(A)
+    @test ishermitian(A)
+    B = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    # compute
+    C = alpha*(A*B)
+    d_C = CUBLAS.hemm('L','U',alpha,d_A,d_B)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+test_hemm(Complex64)
+test_hemm(Complex128)

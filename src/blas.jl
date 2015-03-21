@@ -720,6 +720,34 @@ for (fname, elty) in ((:cublasZher_v2,:Complex128),
     end
 end
 
+### her2
+for (fname, elty) in ((:cublasZher2_v2,:Complex128),
+                      (:cublasCher2_v2,:Complex64))
+    @eval begin
+        function her2!(uplo::BlasChar,
+                      alpha::$elty,
+                      x::CudaVector{$elty},
+                      y::CudaVector{$elty},
+                      A::CudaMatrix{$elty})
+            cuuplo = cublasfill(uplo)
+            m, n = size(A)
+            m == n || throw(DimensionMismatch("Matrix A is $m by $n but must be square"))
+            length(x) == n || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
+            length(y) == n || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            lda = max(1,stride(A,2))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasFillMode_t, Cint,
+                              Ptr{$elty}, Ptr{$elty}, Cint, Ptr{$elty}, Cint,
+                              Ptr{$elty}, Cint),
+                              cublashandle[1], cuuplo, n, [alpha], x, incx, y, incy, A,
+                              lda))
+            A
+        end
+    end
+end
+
 # Level 3
 ## (GE) general matrix-matrix multiplication
 for (fname, elty) in

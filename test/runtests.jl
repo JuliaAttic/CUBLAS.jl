@@ -714,6 +714,35 @@ end
 test_her!(Complex64)
 test_her!(Complex128)
 
+
+##############
+# test her2! #
+##############
+
+function test_her2!(elty)
+    local m = 2
+    # construct matrix and vector
+    A = rand(elty,m,m)
+    A = A + A'
+    x = rand(elty,m)
+    y = rand(elty,m)
+    alpha = convert(elty,2)
+    # move to device
+    d_A = CudaArray(A)
+    d_x = CudaArray(x)
+    d_y = CudaArray(y)
+    # perform rank one update
+    CUBLAS.her2!('U',alpha,d_x,d_y,d_A)
+    A = (alpha*x)*y' + y*(alpha*x)' + A
+    # move to host and compare upper triangles
+    h_A = to_host(d_A)
+    A = triu(A)
+    h_A = triu(h_A)
+    @test_approx_eq(A,h_A)
+end
+test_her2!(Complex64)
+test_her2!(Complex128)
+
 ##############
 # test gemm! #
 ##############

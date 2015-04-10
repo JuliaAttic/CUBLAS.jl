@@ -714,6 +714,35 @@ end
 test_her!(Complex64)
 test_her!(Complex128)
 
+
+##############
+# test her2! #
+##############
+
+function test_her2!(elty)
+    local m = 2
+    # construct matrix and vector
+    A = rand(elty,m,m)
+    A = A + A'
+    x = rand(elty,m)
+    y = rand(elty,m)
+    alpha = convert(elty,2)
+    # move to device
+    d_A = CudaArray(A)
+    d_x = CudaArray(x)
+    d_y = CudaArray(y)
+    # perform rank one update
+    CUBLAS.her2!('U',alpha,d_x,d_y,d_A)
+    A = (alpha*x)*y' + y*(alpha*x)' + A
+    # move to host and compare upper triangles
+    h_A = to_host(d_A)
+    A = triu(A)
+    h_A = triu(h_A)
+    @test_approx_eq(A,h_A)
+end
+test_her2!(Complex64)
+test_her2!(Complex128)
+
 ##############
 # test gemm! #
 ##############
@@ -1115,3 +1144,53 @@ test_trsm(Float32)
 test_trsm(Float64)
 test_trsm(Complex64)
 test_trsm(Complex128)
+
+##############
+# test hemm! #
+##############
+
+function test_hemm!(elty)
+    # generate parameters
+    alpha = rand(elty)
+    beta  = rand(elty)
+    # generate matrices
+    A = rand(elty,m,m)
+    A = A + ctranspose(A)
+    @test ishermitian(A)
+    B = rand(elty,m,n)
+    C = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    d_C = CudaArray(C)
+    # compute
+    C = alpha*(A*B) + beta*C
+    CUBLAS.hemm!('L','L',alpha,d_A,d_B,beta,d_C)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+
+test_hemm!(Complex64)
+test_hemm!(Complex128)
+
+function test_hemm(elty)
+    # generate parameter
+    alpha = rand(elty)
+    # generate matrices
+    A = rand(elty,m,m)
+    A = A + ctranspose(A)
+    @test ishermitian(A)
+    B = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    # compute
+    C = alpha*(A*B)
+    d_C = CUBLAS.hemm('L','U',alpha,d_A,d_B)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+test_hemm(Complex64)
+test_hemm(Complex128)

@@ -1834,3 +1834,54 @@ test_gels_batched(Float32)
 test_gels_batched(Float64)
 test_gels_batched(Complex64)
 test_gels_batched(Complex128)
+
+##############
+# test dgmm! #
+##############
+
+function test_dgmm!(elty)
+    # generate matrices
+    A = rand(elty,m,n)
+    C = rand(elty,m,n)
+    X = rand(elty,m)
+    # move to device
+    d_A = CudaArray(A)
+    d_C = CudaArray(C)
+    d_X = CudaArray(X)
+    # compute
+    C = diagm(X) * A
+    CUBLAS.dgmm!('L',d_A,d_X,d_C)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+    # bounds checking
+    @test_throws DimensionMismatch CUBLAS.dgmm!('R',d_A,d_X,d_C)
+    A = rand(elty,m,m)
+    d_A = CudaArray(A)
+    @test_throws DimensionMismatch CUBLAS.dgmm!('L',d_A,d_X,d_C)
+end
+
+test_dgmm!(Float32)
+test_dgmm!(Float64)
+test_dgmm!(Complex64)
+test_dgmm!(Complex128)
+
+function test_dgmm(elty)
+    # generate matrices
+    A = rand(elty,m,n)
+    X = rand(elty,m)
+    # move to device
+    d_A = CudaArray(A)
+    d_X = CudaArray(X)
+    # compute
+    C = diagm(X) * A
+    d_C = CUBLAS.dgmm('L',d_A,d_X)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+
+test_dgmm(Float32)
+test_dgmm(Float64)
+test_dgmm(Complex64)
+test_dgmm(Complex128)

@@ -645,7 +645,7 @@ function test_tbmv(elty)
     A = bandex(A,0,nbands)
     # convert to 'upper' banded storage format
     AB = band(A,0,nbands)
-    # construct x and y
+    # construct x
     x = rand(elty,m)
     # move to host
     d_AB = CudaArray(AB)
@@ -661,6 +661,62 @@ test_tbmv(Float64)
 test_tbmv(Float32)
 test_tbmv(Complex64)
 test_tbmv(Complex128)
+
+##############
+# test tbsv! #
+##############
+
+function test_tbsv!(elty)
+    # generate triangular matrix
+    A = rand(elty,m,m)
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,0,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # generate vector
+    x = rand(elty,m)
+    # move to device
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    #tbsv!
+    CUBLAS.tbsv!('U','N','N',nbands,d_AB,d_x)
+    x = A\x
+    # compare
+    h_x = to_host(d_x)
+    @test_approx_eq(x,h_x)
+end
+test_tbsv!(Float32)
+test_tbsv!(Float64)
+test_tbsv!(Complex64)
+test_tbsv!(Complex128)
+
+function test_tbsv(elty)
+    # generate triangular matrix
+    A = rand(elty,m,m)
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,0,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # generate vector
+    x = rand(elty,m)
+    # move to device
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    #tbsv
+    d_y = CUBLAS.tbsv('U','N','N',nbands,d_AB,d_x)
+    y = A\x
+    # compare
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_tbsv(Float32)
+test_tbsv(Float64)
+test_tbsv(Complex64)
+test_tbsv(Complex128)
 
 ##############
 # test trmv! #

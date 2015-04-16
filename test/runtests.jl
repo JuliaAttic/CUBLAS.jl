@@ -544,6 +544,69 @@ test_sbmv(Float32)
 test_sbmv(Float64)
 
 ##############
+# test hbmv! #
+##############
+
+function test_hbmv!(elty)
+    # parameters
+    alpha = rand(elty)
+    beta = rand(elty)
+    # generate Hermitian matrix
+    A = rand(elty,m,m)
+    A = A + ctranspose(A)
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,nbands,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # construct x and y
+    x = rand(elty,m)
+    y = rand(elty,m)
+    # move to host
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    d_y = CudaArray(y)
+    # hbmv!
+    CUBLAS.hbmv!('U',nbands,alpha,d_AB,d_x,beta,d_y)
+    y = alpha*(A*x) + beta*y
+    # compare
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_hbmv!(Complex64)
+test_hbmv!(Complex128)
+
+function test_hbmv(elty)
+    # parameters
+    alpha = rand(elty)
+    beta = rand(elty)
+    # generate Hermitian matrix
+    A = rand(elty,m,m)
+    A = A + ctranspose(A)
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,nbands,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # construct x and y
+    x = rand(elty,m)
+    y = rand(elty,m)
+    # move to host
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    # hbmv
+    d_y = CUBLAS.hbmv('U',nbands,d_AB,d_x)
+    y = A*x
+    # compare
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_hbmv(Complex128)
+test_hbmv(Complex64)
+
+##############
 # test trmv! #
 ##############
 

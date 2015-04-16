@@ -592,6 +592,49 @@ for (fname, elty) in ((:cublasZhbmv_v2,:Complex128),
     end
 end
 
+### tbmv, (TB) triangular banded matrix-vector multiplication
+for (fname, elty) in ((:cublasStbmv_v2,:Float32),
+                      (:cublasDtbmv_v2,:Float64),
+                      (:cublasZtbmv_v2,:Complex128),
+                      (:cublasCtbmv_v2,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDtbmv(
+        #   cublasHandle_t handle, cublasFillMode_t uplo,
+        #   cublasOperation_t trans, cublasDiagType_t diag,
+        #   int n, int k, const double *alpha, const double *A, int lda,
+        #   const double *x, int incx)
+        function tbmv!(uplo::BlasChar,
+                       trans::BlasChar,
+                       diag::BlasChar,
+                       k::Integer,
+                       A::CudaMatrix{$elty},
+                       x::CudaVector{$elty})
+            cuuplo  = cublasfill(uplo)
+            cutrans = cublasop(trans)
+            cudiag  = cublasdiag(diag)
+            m, n = size(A)
+            if !(1<=(1+k)<=n) throw(DimensionMismatch("Incorrect number of bands")) end
+            if m < 1+k throw(DimensionMismatch("Array A has fewer than 1+k rows")) end
+            if n != length(x) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasFillMode_t, cublasOperation_t,
+                              cublasDiagType_t, Cint, Cint, Ptr{$elty}, Cint,
+                              Ptr{$elty}, Cint), cublashandle[1], cuuplo, cutrans,
+                              cudiag, n, k, A, lda, x, incx))
+            x
+        end
+        function tbmv(uplo::BlasChar,
+                      trans::BlasChar,
+                      diag::BlasChar,
+                      A::CudaMatrix{$elty},
+                      x::CudaVector{$elty})
+            tbmv!(uplo, trans, diag, A, copy(x))
+        end
+    end
+end
+
 ### trmv, Triangular matrix-vector multiplication
 for (fname, elty) in ((:cublasDtrmv_v2,:Float64),
                       (:cublasStrmv_v2,:Float32),

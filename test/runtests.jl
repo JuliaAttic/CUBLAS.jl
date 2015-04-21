@@ -1344,6 +1344,34 @@ function test_getrf_batched!(elty)
         @test_approx_eq(C[:L],dL)
         @test_approx_eq(C[:U],dU)
     end
+    for i in 1:length(A)
+        d_A[ i ] = CudaArray(A[i])
+    end
+    pivot, info = CUBLAS.getrf_batched!(d_A, true)
+    h_info = to_host(info)
+    h_pivot = to_host(pivot)
+    for As in 1:length(d_A)
+        C   = lufact(A[As])
+        h_A = to_host(d_A[As])
+        #reconstruct L,U
+        dL = eye(elty,m)
+        dU = zeros(elty,(m,m))
+        k = h_info[As]
+        if( k >= 0 )
+            dL += tril(h_A,-k-1)
+            dU += triu(h_A,k)
+        end
+        #compare pivots
+        @test length(setdiff(h_pivot[:,As],C[:p])) == 0
+        #make device pivot matrix
+        P = eye(m)
+        for row in 1:m
+            temp = copy(P[row,:])
+            P[row,:] = P[h_pivot[row,As],:]
+            P[h_pivot[row,As],:] = temp
+        end
+        @test_approx_eq(inv(P)*dL*dU, inv(C[:P]) * C[:L] * C[:U]) 
+    end
 end
 test_getrf_batched!(Float32)
 test_getrf_batched!(Float64)
@@ -1380,3 +1408,34 @@ test_getrf_batched(Float32)
 test_getrf_batched(Float64)
 test_getrf_batched(Complex64)
 test_getrf_batched(Complex128)
+
+######################
+# test getri_batched #
+######################
+
+function test_getri_batched(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    pivot, info = CUBLAS.getrf_batched!(d_A, true)
+    h_info = to_host(info)
+    for Cs in 1:length(h_info)
+        @test h_info[Cs] == 0
+    end
+    pivot, info, d_C = CUBLAS.getri_batched(d_A, pivot)
+    h_info = to_host(info)
+    for Cs in 1:length(d_C)
+        C   = inv(A[Cs])
+        h_C = to_host(d_C[Cs])
+        @test h_info[Cs] == 0
+        @test_approx_eq(C,h_C)
+    end
+end
+test_getri_batched(Float32)
+test_getri_batched(Float64)
+test_getri_batched(Complex64)
+test_getri_batched(Complex128)

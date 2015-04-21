@@ -1376,21 +1376,58 @@ for (fname, elty) in
             lda = max(1,stride(A[1],2))
             Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
             info  = CudaArray(Cint, (length(A)))
-            pivotArray = C_NULL
-            if( Pivot )
-                pivotArray  = CudaArray(Cint, (n, length(A)))
-            end
+            pivotArray  = Pivot ? CudaArray(Cint, (n, length(A))) : C_NULL
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint,
                               Ptr{Cint}, Ptr{Cint}, Cint), cublashandle[1], n,
                               Aptrs, lda, pivotArray, info, length(A)))
-            pivotArray, info
+            if( !Pivot )
+                pivotArray = CudaArray(zeros(Cint, (n, length(A))))
+            end
+            pivotArray, info, A
         end
         function getrf_batched(A::Array{CudaMatrix{$elty},1},
                                Pivot::Bool)
             newA = copy(A)
             pivotarray, info = getrf_batched!(newA, Pivot)
             pivotarray, info, newA
+        end
+    end
+end
+
+## getriBatched - performs batched matrix inversion
+
+for (fname, elty) in
+        ((:cublasDgetriBatched,:Float64),
+         (:cublasSgetriBatched,:Float32),
+         (:cublasZgetriBatched,:Complex128),
+         (:cublasCgetriBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgetriBatched(
+        #   cublasHandle_t handle, int n, double **A,
+        #   int lda, int *PivotArray, double **C,
+        #   int ldb, int *info, int batchSize)
+        function getri_batched(A::Array{CudaMatrix{$elty},1},
+                              pivotArray::CudaMatrix{Cint})
+            for As in A
+                m,n = size(As)
+                if m != n
+                    throw(DimensionMismatch("All A matrices must be square!"))
+                end
+            end
+            C = CudaMatrix{$elty}[similar(A[1]) for i in 1:length(A)]
+            n = size(A[1])[1]
+            lda = max(1,stride(A[1],2))
+            ldc = max(1,stride(C[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            Cptrs = CudaArray(map( (x) -> pointer(x).ptr, C ))
+            info = CudaArray(zeros(Cint,length(A)))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint, 
+                              Ptr{Cint}, Ptr{Ptr{$elty}}, Cint, Ptr{Cint}, Cint),
+                              cublashandle[1], n, Aptrs, lda, pivotArray, Cptrs,
+                              ldc, info, length(A)))
+            pivotArray, info, C
         end
     end
 end

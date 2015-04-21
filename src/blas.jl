@@ -1509,3 +1509,60 @@ for (fname, elty) in
         end
     end
 end
+
+## gelsBatched - performs batched least squares
+
+for (fname, elty) in
+        ((:cublasDgelsBatched,:Float64),
+         (:cublasSgelsBatched,:Float32),
+         (:cublasZgelsBatched,:Complex128),
+         (:cublasCgelsBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgelsBatched(
+        #   cublasHandle_t handle, int m, int n,
+        #   int nrhs, double **A, int lda,
+        #   double **C, int ldc, int *infoArray,
+        #   int *devInfoArray, int batchSize)
+        function gels_batched!(trans::BlasChar,
+                              A::Array{CudaMatrix{$elty},1},
+                              C::Array{CudaMatrix{$elty},1})
+            cutrans = cublasop(trans)
+            if( length(A) != length(C) )
+                throw(DimensionMismatch(""))
+            end
+            for (As,Cs) in zip(A,C)
+                m,n = size(As)
+                mC,nC = size(Cs)
+                if( n != mC )
+                    throw(DimensionMismatch(""))
+                end
+            end
+            m,n = size(A[1])
+            if( m < n )
+                throw(ArgumentError("System must be overdetermined"))
+            end
+            nrhs = size(C[1])[2]
+            lda = max(1,stride(A[1],2))
+            ldc = max(1,stride(A[1],2))
+            Aptrs = CudaArray(map((x) -> pointer(x).ptr, A ))
+            Cptrs = CudaArray(map((x) -> pointer(x).ptr, C ))
+            info = 0
+            infoarray    = C_NULL #CudaArray(zeros(Cint, length(A)))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasOperation_t, Cint, Cint,
+                              Cint, Ptr{Ptr{$elty}}, Cint, Ptr{Ptr{$elty}},
+                              Cint, Ptr{Cint}, Ptr{Cint}, Cint),
+                              cublashandle[1], cutrans, m, n, nrhs, Aptrs, lda,
+                              Cptrs, ldc, [info], infoarray, length(A)))
+            if( info != 0 )
+                throw(ArgumentError,string("Invalid value at ",-info))
+            end
+            A, C, infoarray
+        end
+        function gels_batched(trans::BlasChar,
+                             A::Array{CudaMatrix{$elty},1},
+                             C::Array{CudaMatrix{$elty},1})
+            gels_batched!(trans, copy(A), copy(C))
+        end
+    end
+end

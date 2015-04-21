@@ -1351,3 +1351,46 @@ end
 
 # TODO: julia, tr{m,s}m, Char -> BlasChar
 # TODO: julia, trmm!, alpha::Number -> alpha::$elty
+
+## getrfBatched - performs LU factorizations
+
+for (fname, elty) in
+        ((:cublasDgetrfBatched,:Float64),
+         (:cublasSgetrfBatched,:Float32),
+         (:cublasZgetrfBatched,:Complex128),
+         (:cublasCgetrfBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgetrfBatched(
+        #   cublasHandle_t handle, int n, double **A,
+        #   int lda, int *PivotArray, int *infoArray,
+        #   int batchSize)
+        function getrf_batched!(A::Array{CudaMatrix{$elty},1},
+                               Pivot::Bool)
+            for As in A
+                m,n = size(As)
+                if m != n
+                    throw(DimensionMismatch("All matrices must be square!"))
+                end
+            end
+            m,n = size(A[1])
+            lda = max(1,stride(A[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            info  = CudaArray(Cint, (length(A)))
+            pivotArray = C_NULL
+            if( Pivot )
+                pivotArray  = CudaArray(Cint, (n, length(A)))
+            end
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint,
+                              Ptr{Cint}, Ptr{Cint}, Cint), cublashandle[1], n,
+                              Aptrs, lda, pivotArray, info, length(A)))
+            pivotArray, info
+        end
+        function getrf_batched(A::Array{CudaMatrix{$elty},1},
+                               Pivot::Bool)
+            newA = copy(A)
+            pivotarray, info = getrf_batched!(newA, Pivot)
+            pivotarray, info, newA
+        end
+    end
+end

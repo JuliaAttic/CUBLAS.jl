@@ -1314,3 +1314,69 @@ function test_hemm(elty)
 end
 test_hemm(Complex64)
 test_hemm(Complex128)
+
+######################
+# test getrf_batched #
+######################
+
+function test_getrf_batched!(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    pivot, info = CUBLAS.getrf_batched!(d_A, false)
+    h_info = to_host(info)
+    for As in 1:length(d_A)
+        C   = lufact(A[As],pivot=false)
+        h_A = to_host(d_A[As])
+        #reconstruct L,U
+        dL = eye(elty,m)
+        dU = zeros(elty,(m,m))
+        k = h_info[As]
+        if( k >= 0 )
+            dL += tril(h_A,-k-1)
+            dU += triu(h_A,k)
+        end
+        #compare
+        @test_approx_eq(C[:L],dL)
+        @test_approx_eq(C[:U],dU)
+    end
+end
+test_getrf_batched!(Float32)
+test_getrf_batched!(Float64)
+test_getrf_batched!(Complex64)
+test_getrf_batched!(Complex128)
+
+function test_getrf_batched(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    pivot, info, d_B = CUBLAS.getrf_batched(d_A, false)
+    h_info = to_host(info)
+    for Bs in 1:length(d_B)
+        C   = lufact(A[Bs],pivot=false)
+        h_B = to_host(d_B[Bs])
+        #reconstruct L,U
+        dL = eye(elty,m)
+        dU = zeros(elty,(m,m))
+        k = h_info[Bs]
+        if( h_info[Bs] >= 0 )
+            dU += triu(h_B,k)
+            dL += tril(h_B,-k-1)
+        end
+        #compare
+        @test_approx_eq(C[:L],dL)
+        @test_approx_eq(C[:U],dU)
+    end
+end
+test_getrf_batched(Float32)
+test_getrf_batched(Float64)
+test_getrf_batched(Complex64)
+test_getrf_batched(Complex128)

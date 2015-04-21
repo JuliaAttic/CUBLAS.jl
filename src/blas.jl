@@ -1493,7 +1493,7 @@ for (fname, elty) in
                 push!(TauArray,CudaArray(hTauArray[i]))
             end
             Tauptrs = CudaArray(map( (x) -> pointer(x).ptr, TauArray ))
-            info    = 0
+            info    = zero(Cint)
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Cint, Ptr{Ptr{$elty}},
                               Cint, Ptr{Ptr{$elty}}, Ptr{Cint}, Cint),
@@ -1546,8 +1546,8 @@ for (fname, elty) in
             ldc = max(1,stride(A[1],2))
             Aptrs = CudaArray(map((x) -> pointer(x).ptr, A ))
             Cptrs = CudaArray(map((x) -> pointer(x).ptr, C ))
-            info = 0
-            infoarray    = C_NULL #CudaArray(zeros(Cint, length(A)))
+            info  = zero(Cint)
+            infoarray = CudaArray(zeros(Cint, length(A)))
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
                               (cublasHandle_t, cublasOperation_t, Cint, Cint,
                               Cint, Ptr{Ptr{$elty}}, Cint, Ptr{Ptr{$elty}},

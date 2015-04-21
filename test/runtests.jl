@@ -1439,3 +1439,27 @@ test_getri_batched(Float32)
 test_getri_batched(Float64)
 test_getri_batched(Complex64)
 test_getri_batched(Complex128)
+
+#######################
+# test matinv_batched #
+#######################
+
+function test_matinv_batched(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    info, d_C = CUBLAS.matinv_batched(d_A)
+    for Cs in 1:length(d_C)
+        C   = inv(A[Cs])
+        h_C = to_host(d_C[Cs])
+        @test_approx_eq(C,h_C)
+    end
+end
+test_matinv_batched(Float32)
+test_matinv_batched(Float64)
+test_matinv_batched(Complex64)
+test_matinv_batched(Complex128)

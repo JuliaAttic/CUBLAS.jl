@@ -1406,7 +1406,7 @@ for (fname, elty) in
         # cublasStatus_t cublasDgetriBatched(
         #   cublasHandle_t handle, int n, double **A,
         #   int lda, int *PivotArray, double **C,
-        #   int ldb, int *info, int batchSize)
+        #   int ldc, int *info, int batchSize)
         function getri_batched(A::Array{CudaMatrix{$elty},1},
                               pivotArray::CudaMatrix{Cint})
             for As in A
@@ -1428,6 +1428,45 @@ for (fname, elty) in
                               cublashandle[1], n, Aptrs, lda, pivotArray, Cptrs,
                               ldc, info, length(A)))
             pivotArray, info, C
+        end
+    end
+end
+
+## matinvBatched - performs batched matrix inversion
+
+for (fname, elty) in
+        ((:cublasDmatinvBatched,:Float64),
+         (:cublasSmatinvBatched,:Float32),
+         (:cublasZmatinvBatched,:Complex128),
+         (:cublasCmatinvBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDmatinvBatched(
+        #   cublasHandle_t handle, int n, double **A,
+        #   int lda, double **C, int ldc,
+        #   int *info, int batchSize)
+        function matinv_batched(A::Array{CudaMatrix{$elty},1})
+            for As in A
+                m,n = size(As)
+                if m != n
+                    throw(DimensionMismatch("All A matrices must be square!"))
+                end
+                if n >= 32
+                    throw(ArgumentError("matinv requires all matrices be smaller than 32 x 32"))
+                end
+            end
+            C = CudaMatrix{$elty}[similar(A[1]) for i in 1:length(A)]
+            n = size(A[1])[1]
+            lda = max(1,stride(A[1],2))
+            ldc = max(1,stride(C[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            Cptrs = CudaArray(map( (x) -> pointer(x).ptr, C ))
+            info = CudaArray(zeros(Cint,length(A)))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint,
+                              Ptr{Ptr{$elty}}, Cint, Ptr{Cint}, Cint),
+                              cublashandle[1], n, Aptrs, lda, Cptrs,
+                              ldc, info, length(A)))
+            info, C
         end
     end
 end

@@ -790,6 +790,65 @@ test_gemm(Float64)
 test_gemm(Complex64)
 test_gemm(Complex128)
 
+######################
+# test gemm_batched! #
+######################
+
+function test_gemm_batched!(elty)
+    # parameters
+    alpha = rand(elty)
+    beta = rand(elty)
+    # generate matrices
+    A = [rand(elty,m,k) for i in 1:10]
+    B = [rand(elty,k,n) for i in 1:10]
+    C = [rand(elty,m,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    d_B = CudaArray{elty, 2}[]
+    d_C = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+        push!(d_B,CudaArray(B[i]))
+        push!(d_C,CudaArray(C[i]))
+    end
+    # C = (alpha*A)*B + beta*C
+    CUBLAS.gemm_batched!('N','N',alpha,d_A,d_B,beta,d_C)
+    for i in 1:length(d_C)
+        C[i] = (alpha*A[i])*B[i] + beta*C[i]
+        h_C = to_host(d_C[i])
+        #compare
+        @test_approx_eq(C[i],h_C)
+    end
+end
+test_gemm_batched!(Float32)
+test_gemm_batched!(Float64)
+test_gemm_batched!(Complex64)
+test_gemm_batched!(Complex128)
+
+function test_gemm_batched(elty)
+    # generate matrices
+    A = [rand(elty,m,k) for i in 1:10]
+    B = [rand(elty,k,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    d_B = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A, CudaArray(A[i]))
+        push!(d_B, CudaArray(B[i]))
+    end
+    # C = A*B
+    d_C = CUBLAS.gemm_batched('N','N',d_A,d_B)
+    for i in 1:length(A)
+        C = A[i]*B[i]
+        h_C = to_host(d_C[i])
+        @test_approx_eq(C,h_C)
+    end
+end
+test_gemm_batched(Float32)
+test_gemm_batched(Float64)
+test_gemm_batched(Complex64)
+test_gemm_batched(Complex128)
+
 ##############
 # test symm! #
 ##############

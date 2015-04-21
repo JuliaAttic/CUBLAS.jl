@@ -1204,6 +1204,67 @@ test_trsm(Float64)
 test_trsm(Complex64)
 test_trsm(Complex128)
 
+######################
+# test trsm_batched! #
+######################
+
+function test_trsm_batched!(elty)
+    # generate parameter
+    alpha = rand(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    map!((x) -> triu(x), A)
+    B = [rand(elty,m,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    d_B = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+        push!(d_B,CudaArray(B[i]))
+    end
+    # compute
+    CUBLAS.trsm_batched!('L','U','N','N',alpha,d_A,d_B)
+    # move to host and compare
+    for i in 1:length(d_B)
+        B = alpha*(A\B)
+        h_B = to_host(d_B[i])
+        #compare
+        @test_approx_eq(B,h_B)
+    end
+end
+test_trsm!(Float32)
+test_trsm!(Float64)
+test_trsm!(Complex64)
+test_trsm!(Complex128)
+
+function test_trsm(elty)
+    # generate parameter
+    alpha = rand(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    map!((x) -> triu(x), A)
+    B = [rand(elty,m,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    d_B = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+        push!(d_B,CudaArray(B[i]))
+    end
+    # compute
+    d_C = CUBLAS.trsm_batched('L','U','N','N',alpha,d_A,d_B)
+    # move to host and compare
+    for i in 1:length(d_C)
+        C = alpha*(A[i]\B[i])
+        h_C = to_host(d_C[i])
+        @test_approx_eq(C,h_C)
+    end
+end
+test_trsm(Float32)
+test_trsm(Float64)
+test_trsm(Complex64)
+test_trsm(Complex128)
+
 ##############
 # test hemm! #
 ##############

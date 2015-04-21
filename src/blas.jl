@@ -1287,5 +1287,67 @@ for (mmname, smname, elty) in
         end
     end
 end
+
+## (TR) triangular triangular matrix solution batched
+for (fname, elty) in
+        ((:cublasDtrsmBatched,:Float64),
+         (:cublasStrsmBatched,:Float32),
+         (:cublasZtrsmBatched,:Complex128),
+         (:cublasCtrsmBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDtrsmBatched(cublasHandle_t handle,
+        #   cublasSideMode_t side, cublasFillMode_t uplo,
+        #   cublasOperation_t trans, cublasDiagType_t diag,
+        #   int m, int n,
+        #   const double *alpha,
+        #   const double **A, int lda,
+        #   double **B, int ldb,
+        #   int batchCount)
+        function trsm_batched!(side::BlasChar,
+                               uplo::BlasChar,
+                               transa::BlasChar,
+                               diag::BlasChar,
+                               alpha::($elty),
+                               A::Array{CudaMatrix{$elty},1},
+                               B::Array{CudaMatrix{$elty},1})
+            cuside = cublasside(side)
+            cuuplo = cublasfill(uplo)
+            cutransa = cublasop(transa)
+            cudiag = cublasdiag(diag)
+            if( length(A) != length(B) )
+                throw(DimensionMismatch(""))
+            end
+            for (As,Bs) in zip(A,B)
+                mA, nA = size(As)
+                m,n = size(Bs)
+                if mA != nA throw(DimensionMistmatch("A must be square")) end
+                if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trsm_batched!")) end
+            end
+            m,n = size(B[1])
+            lda = max(1,stride(A[1],2))
+            ldb = max(1,stride(B[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            Bptrs = CudaArray(map( (x) -> pointer(x).ptr, B ))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasSideMode_t, cublasFillMode_t,
+                              cublasOperation_t, cublasDiagType_t, Cint, Cint,
+                              Ptr{$elty}, Ptr{Ptr{$elty}}, Cint, Ptr{Ptr{$elty}},
+                              Cint, Cint), cublashandle[1], cuside, cuuplo,
+                              cutransa, cudiag, m, n, [alpha], Aptrs, lda,
+                              Bptrs, ldb, length(A)))
+            B
+        end
+        function trsm_batched(side::BlasChar,
+                              uplo::BlasChar,
+                              transa::BlasChar,
+                              diag::BlasChar,
+                              alpha::($elty),
+                              A::Array{CudaMatrix{$elty},1},
+                              B::Array{CudaMatrix{$elty},1})
+            trsm_batched!(side, uplo, transa, diag, alpha, A, copy(B) )
+        end
+    end
+end
+
 # TODO: julia, tr{m,s}m, Char -> BlasChar
 # TODO: julia, trmm!, alpha::Number -> alpha::$elty

@@ -1470,3 +1470,42 @@ for (fname, elty) in
         end
     end
 end
+
+## geqrfBatched - performs batched QR factorizations
+
+for (fname, elty) in
+        ((:cublasDgeqrfBatched,:Float64),
+         (:cublasSgeqrfBatched,:Float32),
+         (:cublasZgeqrfBatched,:Complex128),
+         (:cublasCgeqrfBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgeqrfBatched(
+        #   cublasHandle_t handle, int n, int m,
+        #   double **A, int lda, double **TauArray,
+        #   int *infoArray, int batchSize)
+        function geqrf_batched!(A::Array{CudaMatrix{$elty},1})
+            m,n = size(A[1])
+            lda = max(1,stride(A[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            hTauArray = [zeros($elty, min(m,n)) for i in 1:length(A)]
+            TauArray = CudaArray{$elty,1}[]
+            for i in 1:length(A)
+                push!(TauArray,CudaArray(hTauArray[i]))
+            end
+            Tauptrs = CudaArray(map( (x) -> pointer(x).ptr, TauArray ))
+            info    = 0
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Cint, Ptr{Ptr{$elty}},
+                              Cint, Ptr{Ptr{$elty}}, Ptr{Cint}, Cint),
+                              cublashandle[1], m, n, Aptrs, lda,
+                              Tauptrs, [info], length(A)))
+            if( info != 0 )
+                throw(ArgumentError,string("Invalid value at ",-info))
+            end
+            TauArray, A
+        end
+        function geqrf_batched(A::Array{CudaMatrix{$elty},1})
+            geqrf_batched!(copy(A))
+        end
+    end
+end

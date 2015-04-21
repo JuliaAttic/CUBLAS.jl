@@ -1463,3 +1463,65 @@ test_matinv_batched(Float32)
 test_matinv_batched(Float64)
 test_matinv_batched(Complex64)
 test_matinv_batched(Complex128)
+
+######################
+# test geqrf_batched #
+######################
+
+function test_geqrf_batched!(elty)
+    # generate matrices
+    A = [rand(elty,m,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    tau, d_A = CUBLAS.geqrf_batched!(d_A)
+    for As in 1:length(d_A)
+        C   = qrfact(A[As])
+        h_A = to_host(d_A[As])
+        h_tau = to_host(tau[As])
+        # build up Q
+        Q = eye(elty,min(m,n))
+        for i in 1:min(m,n)
+            v = zeros(elty,m)
+            v[i] = one(elty)
+            v[i+1:m] = h_A[i+1:m,i]
+            Q *= eye(elty,m) - h_tau[i] * v * v'
+        end
+        @test_approx_eq(Q,full(C[:Q]))
+    end
+end
+test_geqrf_batched!(Float32)
+test_geqrf_batched!(Float64)
+test_geqrf_batched!(Complex64)
+test_geqrf_batched!(Complex128)
+
+function test_geqrf_batched(elty)
+    # generate matrices
+    A = [rand(elty,m,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    tau, d_B = CUBLAS.geqrf_batched!(d_A)
+    for Bs in 1:length(d_B)
+        C   = qrfact(A[Bs])
+        h_B = to_host(d_B[Bs])
+        h_tau = to_host(tau[Bs])
+        # build up Q
+        Q = eye(elty,min(m,n))
+        for i in 1:min(m,n)
+            v = zeros(elty,m)
+            v[i] = one(elty)
+            v[i+1:m] = h_B[i+1:m,i]
+            Q *= eye(elty,m) - h_tau[i] * v * v'
+        end
+        @test_approx_eq(Q,full(C[:Q]))
+    end
+end
+test_geqrf_batched(Float32)
+test_geqrf_batched(Float64)
+test_geqrf_batched(Complex64)
+test_geqrf_batched(Complex128)

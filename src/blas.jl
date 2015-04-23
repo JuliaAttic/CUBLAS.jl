@@ -1221,3 +1221,62 @@ for (mmname, smname, elty) in
 end
 # TODO: julia, tr{m,s}m, Char -> BlasChar
 # TODO: julia, trmm!, alpha::Number -> alpha::$elty
+
+# BLAS-like extensions
+## geam
+for (fname, elty) in ((:cublasDgeam,:Float64),
+                      (:cublasSgeam,:Float32),
+                      (:cublasZgeam,:Complex128),
+                      (:cublasCgeam,:Complex64))
+   @eval begin
+       # cublasStatus_t cublasCgeam(
+       #   cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
+       #   int m, int n,
+       #   const cuComplex *alpha,
+       #   const cuComplex *A, int lda,
+       #   const cuComplex *B, int ldb,
+       #   const cuComplex *beta,
+       #   cuComplex *C, int ldc)
+       function geam!(transa::BlasChar,
+                      transb::BlasChar,
+                      alpha::($elty),
+                      A::CudaMatrix{$elty},
+                      beta::($elty),
+                      B::CudaMatrix{$elty},
+                      C::CudaMatrix{$elty})
+           cutransa = cublasop(transa)
+           cutransb = cublasop(transb)
+           mA, nA = size(A)
+           mB, nB = size(B)
+           m, n = size(C)
+           if ((transa == 'N') && ((mA != m) && (nA != n ))) throw(DimensionMismatch("")) end
+           if ((transa == 'C' || transa == 'T') && ((nA != m) || (mA != n))) throw(DimensionMismatch("")) end
+           if ((transb == 'N') && ((mB != m) || (nB != n ))) throw(DimensionMismatch("")) end
+           if ((transb == 'C' || transb == 'T') && ((nB != m) || (mB != n))) throw(DimensionMismatch("")) end
+           lda = max(1,stride(A,2))
+           ldb = max(1,stride(B,2))
+           ldc = max(1,stride(C,2))
+           statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                             (cublasHandle_t, cublasOperation_t, cublasOperation_t,
+                             Cint, Cint, Ptr{$elty}, Ptr{$elty}, Cint, Ptr{$elty},
+                             Ptr{$elty}, Cint, Ptr{$elty}, Cint), cublashandle[1],
+                             cutransa, cutransb, m, n, [alpha], A, lda, [beta], B, ldb, C, ldc))
+           C
+       end
+       function geam(transa::BlasChar,
+                     transb::BlasChar,
+                     alpha::($elty),
+                     A::CudaMatrix{$elty},
+                     beta::($elty),
+                     B::CudaMatrix{$elty})
+           m,n = size(B)
+           if ((transb == 'T' || transb == 'C'))
+               geam!( transa, transb, alpha, A, beta, B, similar(B, $elty, (n,m) ) )
+           end
+           if (transb == 'N')
+               geam!( transa, transb, alpha, A, beta, B, similar(B, $elty, (m,n) ) )
+           end
+       end
+       geam( uplo::BlasChar, trans::BlasChar, A::CudaMatrix{$elty}, B::CudaMatrix{$elty}) = geam( uplo, trans, one($elty), A, one($elty), B)
+    end
+end

@@ -1194,3 +1194,87 @@ function test_hemm(elty)
 end
 test_hemm(Complex64)
 test_hemm(Complex128)
+
+##############
+# test geam! #
+##############
+
+function test_geam!(elty)
+    # generate parameters
+    alpha = rand(elty)
+    beta  = rand(elty)
+    # generate matrices
+    A = rand(elty,m,n)
+    B = rand(elty,m,n)
+    C = zeros(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    d_C = CudaArray(C)
+    # compute
+    C = alpha*A + beta*B
+    CUBLAS.geam!('N','N',alpha,d_A,beta,d_B,d_C)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+   
+    #test in place versions too 
+    C = rand(elty,m,n)
+    d_C = CudaArray(C)
+    C = alpha*C + beta*B
+    CUBLAS.geam!('N','N',alpha,d_C,beta,d_B,d_C)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+    C = rand(elty,m,n)
+    d_C = CudaArray(C)
+    C = alpha*A + beta*C
+    CUBLAS.geam!('N','N',alpha,d_A,beta,d_C,d_C)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+
+    #test setting C to zero
+    C = rand(elty,m,n)
+    d_C = CudaArray(C)
+    alpha = zero(elty)
+    beta  = zero(elty)
+    CUBLAS.geam!('N','N',alpha,d_A,beta,d_B,d_C)
+    h_C = to_host(d_C)
+    @test_approx_eq(h_C,zeros(elty,m,n))
+
+    # bounds checking
+    @test_throws DimensionMismatch CUBLAS.geam!('N','T',alpha,d_A,beta,d_B,d_C)
+    @test_throws DimensionMismatch CUBLAS.geam!('T','T',alpha,d_A,beta,d_B,d_C)
+    @test_throws DimensionMismatch CUBLAS.geam!('T','N',alpha,d_A,beta,d_B,d_C)
+
+end
+
+test_geam!(Float32)
+test_geam!(Float64)
+test_geam!(Complex64)
+test_geam!(Complex128)
+
+function test_geam(elty)
+    # generate parameter
+    alpha = rand(elty)
+    beta  = rand(elty)
+    # generate matrices
+    A = rand(elty,m,n)
+    B = rand(elty,m,n)
+    # move to device
+    d_A = CudaArray(A)
+    d_B = CudaArray(B)
+    C = zeros(elty,m,n)
+    # compute
+    C = alpha*A + beta*B
+    d_C = CUBLAS.geam('N','N',alpha,d_A,beta,d_B)
+    # move to host and compare
+    h_C = to_host(d_C)
+    @test_approx_eq(C,h_C)
+end
+
+test_geam(Float32)
+test_geam(Float64)
+test_geam(Complex64)
+test_geam(Complex128)

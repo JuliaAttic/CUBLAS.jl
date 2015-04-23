@@ -544,6 +544,181 @@ test_sbmv(Float32)
 test_sbmv(Float64)
 
 ##############
+# test hbmv! #
+##############
+
+function test_hbmv!(elty)
+    # parameters
+    alpha = rand(elty)
+    beta = rand(elty)
+    # generate Hermitian matrix
+    A = rand(elty,m,m)
+    A = A + ctranspose(A)
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,nbands,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # construct x and y
+    x = rand(elty,m)
+    y = rand(elty,m)
+    # move to host
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    d_y = CudaArray(y)
+    # hbmv!
+    CUBLAS.hbmv!('U',nbands,alpha,d_AB,d_x,beta,d_y)
+    y = alpha*(A*x) + beta*y
+    # compare
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_hbmv!(Complex64)
+test_hbmv!(Complex128)
+
+function test_hbmv(elty)
+    # parameters
+    alpha = rand(elty)
+    beta = rand(elty)
+    # generate Hermitian matrix
+    A = rand(elty,m,m)
+    A = A + ctranspose(A)
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,nbands,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # construct x and y
+    x = rand(elty,m)
+    y = rand(elty,m)
+    # move to host
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    # hbmv
+    d_y = CUBLAS.hbmv('U',nbands,d_AB,d_x)
+    y = A*x
+    # compare
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_hbmv(Complex128)
+test_hbmv(Complex64)
+
+##############
+# test tbmv! #
+##############
+
+function test_tbmv!(elty)
+    # generate triangular matrix
+    A = rand(elty,m,m)
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,0,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # construct x and y
+    x = rand(elty,m)
+    # move to host
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    # tbmv!
+    CUBLAS.tbmv!('U','N','N',nbands,d_AB,d_x)
+    x = A*x
+    # compare
+    h_x = to_host(d_x)
+    @test_approx_eq(x,h_x)
+end
+test_tbmv!(Float64)
+test_tbmv!(Float32)
+test_tbmv!(Complex64)
+test_tbmv!(Complex128)
+
+function test_tbmv(elty)
+    # generate triangular matrix
+    A = rand(elty,m,m)
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,0,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # construct x
+    x = rand(elty,m)
+    # move to host
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    # tbmv!
+    d_y = CUBLAS.tbmv!('U','N','N',nbands,d_AB,d_x)
+    y = A*x
+    # compare
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_tbmv(Float64)
+test_tbmv(Float32)
+test_tbmv(Complex64)
+test_tbmv(Complex128)
+
+##############
+# test tbsv! #
+##############
+
+function test_tbsv!(elty)
+    # generate triangular matrix
+    A = rand(elty,m,m)
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,0,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # generate vector
+    x = rand(elty,m)
+    # move to device
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    #tbsv!
+    CUBLAS.tbsv!('U','N','N',nbands,d_AB,d_x)
+    x = A\x
+    # compare
+    h_x = to_host(d_x)
+    @test_approx_eq(x,h_x)
+end
+test_tbsv!(Float32)
+test_tbsv!(Float64)
+test_tbsv!(Complex64)
+test_tbsv!(Complex128)
+
+function test_tbsv(elty)
+    # generate triangular matrix
+    A = rand(elty,m,m)
+    # restrict to 3 bands
+    nbands = 3
+    @test m >= 1+nbands
+    A = bandex(A,0,nbands)
+    # convert to 'upper' banded storage format
+    AB = band(A,0,nbands)
+    # generate vector
+    x = rand(elty,m)
+    # move to device
+    d_AB = CudaArray(AB)
+    d_x = CudaArray(x)
+    #tbsv
+    d_y = CUBLAS.tbsv('U','N','N',nbands,d_AB,d_x)
+    y = A\x
+    # compare
+    h_y = to_host(d_y)
+    @test_approx_eq(y,h_y)
+end
+test_tbsv(Float32)
+test_tbsv(Float64)
+test_tbsv(Complex64)
+test_tbsv(Complex128)
+
+##############
 # test trmv! #
 ##############
 

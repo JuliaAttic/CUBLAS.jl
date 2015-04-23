@@ -938,6 +938,74 @@ for (fname, elty) in
     end
 end
 
+## (GE) general matrix-matrix multiplication batched
+for (fname, elty) in
+        ((:cublasDgemmBatched,:Float64),
+         (:cublasSgemmBatched,:Float32),
+         (:cublasZgemmBatched,:Complex128),
+         (:cublasCgemmBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgemmBatched(
+        #   cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
+        #   int m, int n, int k,
+        #   const double *alpha, const double **A, int lda,
+        #   const double **B, int ldb, const double *beta,
+        #   double **C, int ldc, int batchCount)
+        function gemm_batched!(transA::BlasChar,
+                               transB::BlasChar,
+                               alpha::($elty),
+                               A::Array{CudaMatrix{$elty},1},
+                               B::Array{CudaMatrix{$elty},1},
+                               beta::($elty),
+                               C::Array{CudaMatrix{$elty},1})
+            if( length(A) != length(B) || length(A) != length(C) )
+                throw(DimensionMismatch(""))
+            end
+            for (As,Bs,Cs) in zip(A,B,C)
+                m = size(As, transA == 'N' ? 1 : 2)
+                k = size(As, transA == 'N' ? 2 : 1)
+                n = size(Bs, transB == 'N' ? 2 : 1)
+                if m != size(Cs,1) || n != size(Cs,2) || k != size(Bs, transB == 'N' ? 1 : 2)
+                    throw(DimensionMismatch(""))
+                end
+            end
+            m = size(A[1], transA == 'N' ? 1 : 2)
+            k = size(A[1], transA == 'N' ? 2 : 1)
+            n = size(B[1], transB == 'N' ? 2 : 1)
+            cutransA = cublasop(transA)
+            cutransB = cublasop(transB)
+            lda = max(1,stride(A[1],2))
+            ldb = max(1,stride(B[1],2))
+            ldc = max(1,stride(C[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            Bptrs = CudaArray(map( (x) -> pointer(x).ptr, B ))
+            Cptrs = CudaArray(map( (x) -> pointer(x).ptr, C ))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasOperation_t,
+                              cublasOperation_t, Cint, Cint, Cint, Ptr{$elty},
+                              Ptr{Ptr{$elty}}, Cint, Ptr{Ptr{$elty}}, Cint, Ptr{$elty},
+                              Ptr{Ptr{$elty}}, Cint, Cint), cublashandle[1], cutransA,
+                              cutransB, m, n, k, [alpha], Aptrs, lda, Bptrs, ldb, [beta],
+                              Cptrs, ldc, length(A)))
+            C
+        end
+        function gemm_batched(transA::BlasChar,
+                      transB::BlasChar,
+                      alpha::($elty),
+                      A::Array{CudaMatrix{$elty},1},
+                      B::Array{CudaMatrix{$elty},1})
+            C = CudaMatrix{$elty}[similar( B[1], $elty, (size(A[1], transA == 'N' ? 1 : 2),size(B[1], transB == 'N' ? 2 : 1))) for i in 1:length(A)]
+            gemm_batched!(transA, transB, alpha, A, B, zero($elty), C )
+        end
+        function gemm_batched(transA::BlasChar,
+                      transB::BlasChar,
+                      A::Array{CudaMatrix{$elty},1},
+                      B::Array{CudaMatrix{$elty},1})
+            gemm_batched(transA, transB, one($elty), A, B)
+        end
+    end
+end
+
 ## (SY) symmetric matrix-matrix and matrix-vector multiplication
 for (fname, elty) in ((:cublasDsymm_v2,:Float64),
                       (:cublasSsymm_v2,:Float32),
@@ -1350,6 +1418,68 @@ for (mmname, smname, elty) in
         end
     end
 end
+
+## (TR) triangular triangular matrix solution batched
+for (fname, elty) in
+        ((:cublasDtrsmBatched,:Float64),
+         (:cublasStrsmBatched,:Float32),
+         (:cublasZtrsmBatched,:Complex128),
+         (:cublasCtrsmBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDtrsmBatched(cublasHandle_t handle,
+        #   cublasSideMode_t side, cublasFillMode_t uplo,
+        #   cublasOperation_t trans, cublasDiagType_t diag,
+        #   int m, int n,
+        #   const double *alpha,
+        #   const double **A, int lda,
+        #   double **B, int ldb,
+        #   int batchCount)
+        function trsm_batched!(side::BlasChar,
+                               uplo::BlasChar,
+                               transa::BlasChar,
+                               diag::BlasChar,
+                               alpha::($elty),
+                               A::Array{CudaMatrix{$elty},1},
+                               B::Array{CudaMatrix{$elty},1})
+            cuside = cublasside(side)
+            cuuplo = cublasfill(uplo)
+            cutransa = cublasop(transa)
+            cudiag = cublasdiag(diag)
+            if( length(A) != length(B) )
+                throw(DimensionMismatch(""))
+            end
+            for (As,Bs) in zip(A,B)
+                mA, nA = size(As)
+                m,n = size(Bs)
+                if mA != nA throw(DimensionMistmatch("A must be square")) end
+                if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trsm_batched!")) end
+            end
+            m,n = size(B[1])
+            lda = max(1,stride(A[1],2))
+            ldb = max(1,stride(B[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            Bptrs = CudaArray(map( (x) -> pointer(x).ptr, B ))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasSideMode_t, cublasFillMode_t,
+                              cublasOperation_t, cublasDiagType_t, Cint, Cint,
+                              Ptr{$elty}, Ptr{Ptr{$elty}}, Cint, Ptr{Ptr{$elty}},
+                              Cint, Cint), cublashandle[1], cuside, cuuplo,
+                              cutransa, cudiag, m, n, [alpha], Aptrs, lda,
+                              Bptrs, ldb, length(A)))
+            B
+        end
+        function trsm_batched(side::BlasChar,
+                              uplo::BlasChar,
+                              transa::BlasChar,
+                              diag::BlasChar,
+                              alpha::($elty),
+                              A::Array{CudaMatrix{$elty},1},
+                              B::Array{CudaMatrix{$elty},1})
+            trsm_batched!(side, uplo, transa, diag, alpha, A, copy(B) )
+        end
+    end
+end
+
 # TODO: julia, tr{m,s}m, Char -> BlasChar
 # TODO: julia, trmm!, alpha::Number -> alpha::$elty
 
@@ -1409,5 +1539,220 @@ for (fname, elty) in ((:cublasDgeam,:Float64),
            end
        end
        geam( uplo::BlasChar, trans::BlasChar, A::CudaMatrix{$elty}, B::CudaMatrix{$elty}) = geam( uplo, trans, one($elty), A, one($elty), B)
+    end
+end
+
+## getrfBatched - performs LU factorizations
+
+for (fname, elty) in
+        ((:cublasDgetrfBatched,:Float64),
+         (:cublasSgetrfBatched,:Float32),
+         (:cublasZgetrfBatched,:Complex128),
+         (:cublasCgetrfBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgetrfBatched(
+        #   cublasHandle_t handle, int n, double **A,
+        #   int lda, int *PivotArray, int *infoArray,
+        #   int batchSize)
+        function getrf_batched!(A::Array{CudaMatrix{$elty},1},
+                               Pivot::Bool)
+            for As in A
+                m,n = size(As)
+                if m != n
+                    throw(DimensionMismatch("All matrices must be square!"))
+                end
+            end
+            m,n = size(A[1])
+            lda = max(1,stride(A[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            info  = CudaArray(Cint, (length(A)))
+            pivotArray  = Pivot ? CudaArray(Cint, (n, length(A))) : C_NULL
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint,
+                              Ptr{Cint}, Ptr{Cint}, Cint), cublashandle[1], n,
+                              Aptrs, lda, pivotArray, info, length(A)))
+            if( !Pivot )
+                pivotArray = CudaArray(zeros(Cint, (n, length(A))))
+            end
+            pivotArray, info, A
+        end
+        function getrf_batched(A::Array{CudaMatrix{$elty},1},
+                               Pivot::Bool)
+            newA = copy(A)
+            pivotarray, info = getrf_batched!(newA, Pivot)
+            pivotarray, info, newA
+        end
+    end
+end
+
+## getriBatched - performs batched matrix inversion
+
+for (fname, elty) in
+        ((:cublasDgetriBatched,:Float64),
+         (:cublasSgetriBatched,:Float32),
+         (:cublasZgetriBatched,:Complex128),
+         (:cublasCgetriBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgetriBatched(
+        #   cublasHandle_t handle, int n, double **A,
+        #   int lda, int *PivotArray, double **C,
+        #   int ldc, int *info, int batchSize)
+        function getri_batched(A::Array{CudaMatrix{$elty},1},
+                              pivotArray::CudaMatrix{Cint})
+            for As in A
+                m,n = size(As)
+                if m != n
+                    throw(DimensionMismatch("All A matrices must be square!"))
+                end
+            end
+            C = CudaMatrix{$elty}[similar(A[1]) for i in 1:length(A)]
+            n = size(A[1])[1]
+            lda = max(1,stride(A[1],2))
+            ldc = max(1,stride(C[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            Cptrs = CudaArray(map( (x) -> pointer(x).ptr, C ))
+            info = CudaArray(zeros(Cint,length(A)))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint, 
+                              Ptr{Cint}, Ptr{Ptr{$elty}}, Cint, Ptr{Cint}, Cint),
+                              cublashandle[1], n, Aptrs, lda, pivotArray, Cptrs,
+                              ldc, info, length(A)))
+            pivotArray, info, C
+        end
+    end
+end
+
+## matinvBatched - performs batched matrix inversion
+
+for (fname, elty) in
+        ((:cublasDmatinvBatched,:Float64),
+         (:cublasSmatinvBatched,:Float32),
+         (:cublasZmatinvBatched,:Complex128),
+         (:cublasCmatinvBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDmatinvBatched(
+        #   cublasHandle_t handle, int n, double **A,
+        #   int lda, double **C, int ldc,
+        #   int *info, int batchSize)
+        function matinv_batched(A::Array{CudaMatrix{$elty},1})
+            for As in A
+                m,n = size(As)
+                if m != n
+                    throw(DimensionMismatch("All A matrices must be square!"))
+                end
+                if n >= 32
+                    throw(ArgumentError("matinv requires all matrices be smaller than 32 x 32"))
+                end
+            end
+            C = CudaMatrix{$elty}[similar(A[1]) for i in 1:length(A)]
+            n = size(A[1])[1]
+            lda = max(1,stride(A[1],2))
+            ldc = max(1,stride(C[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            Cptrs = CudaArray(map( (x) -> pointer(x).ptr, C ))
+            info = CudaArray(zeros(Cint,length(A)))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint,
+                              Ptr{Ptr{$elty}}, Cint, Ptr{Cint}, Cint),
+                              cublashandle[1], n, Aptrs, lda, Cptrs,
+                              ldc, info, length(A)))
+            info, C
+        end
+    end
+end
+
+## geqrfBatched - performs batched QR factorizations
+
+for (fname, elty) in
+        ((:cublasDgeqrfBatched,:Float64),
+         (:cublasSgeqrfBatched,:Float32),
+         (:cublasZgeqrfBatched,:Complex128),
+         (:cublasCgeqrfBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgeqrfBatched(
+        #   cublasHandle_t handle, int n, int m,
+        #   double **A, int lda, double **TauArray,
+        #   int *infoArray, int batchSize)
+        function geqrf_batched!(A::Array{CudaMatrix{$elty},1})
+            m,n = size(A[1])
+            lda = max(1,stride(A[1],2))
+            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            hTauArray = [zeros($elty, min(m,n)) for i in 1:length(A)]
+            TauArray = CudaArray{$elty,1}[]
+            for i in 1:length(A)
+                push!(TauArray,CudaArray(hTauArray[i]))
+            end
+            Tauptrs = CudaArray(map( (x) -> pointer(x).ptr, TauArray ))
+            info    = zero(Cint)
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, Cint, Cint, Ptr{Ptr{$elty}},
+                              Cint, Ptr{Ptr{$elty}}, Ptr{Cint}, Cint),
+                              cublashandle[1], m, n, Aptrs, lda,
+                              Tauptrs, [info], length(A)))
+            if( info != 0 )
+                throw(ArgumentError,string("Invalid value at ",-info))
+            end
+            TauArray, A
+        end
+        function geqrf_batched(A::Array{CudaMatrix{$elty},1})
+            geqrf_batched!(copy(A))
+        end
+    end
+end
+
+## gelsBatched - performs batched least squares
+
+for (fname, elty) in
+        ((:cublasDgelsBatched,:Float64),
+         (:cublasSgelsBatched,:Float32),
+         (:cublasZgelsBatched,:Complex128),
+         (:cublasCgelsBatched,:Complex64))
+    @eval begin
+        # cublasStatus_t cublasDgelsBatched(
+        #   cublasHandle_t handle, int m, int n,
+        #   int nrhs, double **A, int lda,
+        #   double **C, int ldc, int *infoArray,
+        #   int *devInfoArray, int batchSize)
+        function gels_batched!(trans::BlasChar,
+                              A::Array{CudaMatrix{$elty},1},
+                              C::Array{CudaMatrix{$elty},1})
+            cutrans = cublasop(trans)
+            if( length(A) != length(C) )
+                throw(DimensionMismatch(""))
+            end
+            for (As,Cs) in zip(A,C)
+                m,n = size(As)
+                mC,nC = size(Cs)
+                if( n != mC )
+                    throw(DimensionMismatch(""))
+                end
+            end
+            m,n = size(A[1])
+            if( m < n )
+                throw(ArgumentError("System must be overdetermined"))
+            end
+            nrhs = size(C[1])[2]
+            lda = max(1,stride(A[1],2))
+            ldc = max(1,stride(A[1],2))
+            Aptrs = CudaArray(map((x) -> pointer(x).ptr, A ))
+            Cptrs = CudaArray(map((x) -> pointer(x).ptr, C ))
+            info  = zero(Cint)
+            infoarray = CudaArray(zeros(Cint, length(A)))
+            statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                              (cublasHandle_t, cublasOperation_t, Cint, Cint,
+                              Cint, Ptr{Ptr{$elty}}, Cint, Ptr{Ptr{$elty}},
+                              Cint, Ptr{Cint}, Ptr{Cint}, Cint),
+                              cublashandle[1], cutrans, m, n, nrhs, Aptrs, lda,
+                              Cptrs, ldc, [info], infoarray, length(A)))
+            if( info != 0 )
+                throw(ArgumentError,string("Invalid value at ",-info))
+            end
+            A, C, infoarray
+        end
+        function gels_batched(trans::BlasChar,
+                             A::Array{CudaMatrix{$elty},1},
+                             C::Array{CudaMatrix{$elty},1})
+            gels_batched!(trans, copy(A), copy(C))
+        end
     end
 end

@@ -965,6 +965,65 @@ test_gemm(Float64)
 test_gemm(Complex64)
 test_gemm(Complex128)
 
+######################
+# test gemm_batched! #
+######################
+
+function test_gemm_batched!(elty)
+    # parameters
+    alpha = rand(elty)
+    beta = rand(elty)
+    # generate matrices
+    A = [rand(elty,m,k) for i in 1:10]
+    B = [rand(elty,k,n) for i in 1:10]
+    C = [rand(elty,m,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    d_B = CudaArray{elty, 2}[]
+    d_C = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+        push!(d_B,CudaArray(B[i]))
+        push!(d_C,CudaArray(C[i]))
+    end
+    # C = (alpha*A)*B + beta*C
+    CUBLAS.gemm_batched!('N','N',alpha,d_A,d_B,beta,d_C)
+    for i in 1:length(d_C)
+        C[i] = (alpha*A[i])*B[i] + beta*C[i]
+        h_C = to_host(d_C[i])
+        #compare
+        @test_approx_eq(C[i],h_C)
+    end
+end
+test_gemm_batched!(Float32)
+test_gemm_batched!(Float64)
+test_gemm_batched!(Complex64)
+test_gemm_batched!(Complex128)
+
+function test_gemm_batched(elty)
+    # generate matrices
+    A = [rand(elty,m,k) for i in 1:10]
+    B = [rand(elty,k,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    d_B = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A, CudaArray(A[i]))
+        push!(d_B, CudaArray(B[i]))
+    end
+    # C = A*B
+    d_C = CUBLAS.gemm_batched('N','N',d_A,d_B)
+    for i in 1:length(A)
+        C = A[i]*B[i]
+        h_C = to_host(d_C[i])
+        @test_approx_eq(C,h_C)
+    end
+end
+test_gemm_batched(Float32)
+test_gemm_batched(Float64)
+test_gemm_batched(Complex64)
+test_gemm_batched(Complex128)
+
 ##############
 # test symm! #
 ##############
@@ -1320,6 +1379,67 @@ test_trsm(Float64)
 test_trsm(Complex64)
 test_trsm(Complex128)
 
+######################
+# test trsm_batched! #
+######################
+
+function test_trsm_batched!(elty)
+    # generate parameter
+    alpha = rand(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    map!((x) -> triu(x), A)
+    B = [rand(elty,m,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    d_B = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+        push!(d_B,CudaArray(B[i]))
+    end
+    # compute
+    CUBLAS.trsm_batched!('L','U','N','N',alpha,d_A,d_B)
+    # move to host and compare
+    for i in 1:length(d_B)
+        B = alpha*(A\B)
+        h_B = to_host(d_B[i])
+        #compare
+        @test_approx_eq(B,h_B)
+    end
+end
+test_trsm!(Float32)
+test_trsm!(Float64)
+test_trsm!(Complex64)
+test_trsm!(Complex128)
+
+function test_trsm(elty)
+    # generate parameter
+    alpha = rand(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    map!((x) -> triu(x), A)
+    B = [rand(elty,m,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    d_B = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+        push!(d_B,CudaArray(B[i]))
+    end
+    # compute
+    d_C = CUBLAS.trsm_batched('L','U','N','N',alpha,d_A,d_B)
+    # move to host and compare
+    for i in 1:length(d_C)
+        C = alpha*(A[i]\B[i])
+        h_C = to_host(d_C[i])
+        @test_approx_eq(C,h_C)
+    end
+end
+test_trsm(Float32)
+test_trsm(Float64)
+test_trsm(Complex64)
+test_trsm(Complex128)
+
 ##############
 # test hemm! #
 ##############
@@ -1453,3 +1573,264 @@ test_geam(Float32)
 test_geam(Float64)
 test_geam(Complex64)
 test_geam(Complex128)
+
+######################
+# test getrf_batched #
+######################
+
+function test_getrf_batched!(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    pivot, info = CUBLAS.getrf_batched!(d_A, false)
+    h_info = to_host(info)
+    for As in 1:length(d_A)
+        C   = lufact(A[As],pivot=false)
+        h_A = to_host(d_A[As])
+        #reconstruct L,U
+        dL = eye(elty,m)
+        dU = zeros(elty,(m,m))
+        k = h_info[As]
+        if( k >= 0 )
+            dL += tril(h_A,-k-1)
+            dU += triu(h_A,k)
+        end
+        #compare
+        @test_approx_eq(C[:L],dL)
+        @test_approx_eq(C[:U],dU)
+    end
+    for i in 1:length(A)
+        d_A[ i ] = CudaArray(A[i])
+    end
+    pivot, info = CUBLAS.getrf_batched!(d_A, true)
+    h_info = to_host(info)
+    h_pivot = to_host(pivot)
+    for As in 1:length(d_A)
+        C   = lufact(A[As])
+        h_A = to_host(d_A[As])
+        #reconstruct L,U
+        dL = eye(elty,m)
+        dU = zeros(elty,(m,m))
+        k = h_info[As]
+        if( k >= 0 )
+            dL += tril(h_A,-k-1)
+            dU += triu(h_A,k)
+        end
+        #compare pivots
+        @test length(setdiff(h_pivot[:,As],C[:p])) == 0
+        #make device pivot matrix
+        P = eye(m)
+        for row in 1:m
+            temp = copy(P[row,:])
+            P[row,:] = P[h_pivot[row,As],:]
+            P[h_pivot[row,As],:] = temp
+        end
+        @test_approx_eq(inv(P)*dL*dU, inv(C[:P]) * C[:L] * C[:U]) 
+    end
+end
+test_getrf_batched!(Float32)
+test_getrf_batched!(Float64)
+test_getrf_batched!(Complex64)
+test_getrf_batched!(Complex128)
+
+function test_getrf_batched(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    pivot, info, d_B = CUBLAS.getrf_batched(d_A, false)
+    h_info = to_host(info)
+    for Bs in 1:length(d_B)
+        C   = lufact(A[Bs],pivot=false)
+        h_B = to_host(d_B[Bs])
+        #reconstruct L,U
+        dL = eye(elty,m)
+        dU = zeros(elty,(m,m))
+        k = h_info[Bs]
+        if( h_info[Bs] >= 0 )
+            dU += triu(h_B,k)
+            dL += tril(h_B,-k-1)
+        end
+        #compare
+        @test_approx_eq(C[:L],dL)
+        @test_approx_eq(C[:U],dU)
+    end
+end
+test_getrf_batched(Float32)
+test_getrf_batched(Float64)
+test_getrf_batched(Complex64)
+test_getrf_batched(Complex128)
+
+######################
+# test getri_batched #
+######################
+
+function test_getri_batched(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    pivot, info = CUBLAS.getrf_batched!(d_A, true)
+    h_info = to_host(info)
+    for Cs in 1:length(h_info)
+        @test h_info[Cs] == 0
+    end
+    pivot, info, d_C = CUBLAS.getri_batched(d_A, pivot)
+    h_info = to_host(info)
+    for Cs in 1:length(d_C)
+        C   = inv(A[Cs])
+        h_C = to_host(d_C[Cs])
+        @test h_info[Cs] == 0
+        @test_approx_eq(C,h_C)
+    end
+end
+test_getri_batched(Float32)
+test_getri_batched(Float64)
+test_getri_batched(Complex64)
+test_getri_batched(Complex128)
+
+#######################
+# test matinv_batched #
+#######################
+
+function test_matinv_batched(elty)
+    # generate matrices
+    A = [rand(elty,m,m) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    info, d_C = CUBLAS.matinv_batched(d_A)
+    for Cs in 1:length(d_C)
+        C   = inv(A[Cs])
+        h_C = to_host(d_C[Cs])
+        @test_approx_eq(C,h_C)
+    end
+end
+test_matinv_batched(Float32)
+test_matinv_batched(Float64)
+test_matinv_batched(Complex64)
+test_matinv_batched(Complex128)
+
+######################
+# test geqrf_batched #
+######################
+
+function test_geqrf_batched!(elty)
+    # generate matrices
+    A = [rand(elty,m,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    tau, d_A = CUBLAS.geqrf_batched!(d_A)
+    for As in 1:length(d_A)
+        C   = qrfact(A[As])
+        h_A = to_host(d_A[As])
+        h_tau = to_host(tau[As])
+        # build up Q
+        Q = eye(elty,min(m,n))
+        for i in 1:min(m,n)
+            v = zeros(elty,m)
+            v[i] = one(elty)
+            v[i+1:m] = h_A[i+1:m,i]
+            Q *= eye(elty,m) - h_tau[i] * v * v'
+        end
+        @test_approx_eq(Q,full(C[:Q]))
+    end
+end
+test_geqrf_batched!(Float32)
+test_geqrf_batched!(Float64)
+test_geqrf_batched!(Complex64)
+test_geqrf_batched!(Complex128)
+
+function test_geqrf_batched(elty)
+    # generate matrices
+    A = [rand(elty,m,n) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+    end
+    tau, d_B = CUBLAS.geqrf_batched!(d_A)
+    for Bs in 1:length(d_B)
+        C   = qrfact(A[Bs])
+        h_B = to_host(d_B[Bs])
+        h_tau = to_host(tau[Bs])
+        # build up Q
+        Q = eye(elty,min(m,n))
+        for i in 1:min(m,n)
+            v = zeros(elty,m)
+            v[i] = one(elty)
+            v[i+1:m] = h_B[i+1:m,i]
+            Q *= eye(elty,m) - h_tau[i] * v * v'
+        end
+        @test_approx_eq(Q,full(C[:Q]))
+    end
+end
+test_geqrf_batched(Float32)
+test_geqrf_batched(Float64)
+test_geqrf_batched(Complex64)
+test_geqrf_batched(Complex128)
+
+#####################
+# test gels_batched #
+#####################
+
+function test_gels_batched!(elty)
+    # generate matrices
+    A = [rand(elty,n,n) for i in 1:10]
+    C = [rand(elty,n,k) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    d_C = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+        push!(d_C,CudaArray(C[i]))
+    end
+    d_A, d_C, info = CUBLAS.gels_batched!('N',d_A, d_C)
+    for Cs in 1:length(d_C)
+        X = A[Cs]\C[Cs]
+        h_C = to_host(d_C[Cs])
+        @test_approx_eq(X,h_C)
+    end
+end
+test_gels_batched!(Float32)
+test_gels_batched!(Float64)
+test_gels_batched!(Complex64)
+test_gels_batched!(Complex128)
+
+function test_gels_batched(elty)
+    # generate matrices
+    A = [rand(elty,n,n) for i in 1:10]
+    C = [rand(elty,n,k) for i in 1:10]
+    # move to device
+    d_A = CudaArray{elty, 2}[]
+    d_C = CudaArray{elty, 2}[]
+    for i in 1:length(A)
+        push!(d_A,CudaArray(A[i]))
+        push!(d_C,CudaArray(C[i]))
+    end
+    d_B, d_D, info = CUBLAS.gels_batched('N',d_A, d_C)
+    for Ds in 1:length(d_D)
+        X = A[Ds]\C[Ds]
+        h_D = to_host(d_D[Ds])
+        @test_approx_eq(X,h_D)
+    end
+end
+test_gels_batched(Float32)
+test_gels_batched(Float64)
+test_gels_batched(Complex64)
+test_gels_batched(Complex128)

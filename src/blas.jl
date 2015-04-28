@@ -1756,3 +1756,44 @@ for (fname, elty) in
         end
     end
 end
+
+## dgmm
+for (fname, elty) in ((:cublasDdgmm,:Float64),
+                      (:cublasSdgmm,:Float32),
+                      (:cublasZdgmm,:Complex128),
+                      (:cublasCdgmm,:Complex64))
+   @eval begin
+       # cublasStatus_t cublasCdgmm(
+       #   cublasHandle_t handle, cublasSideMode_t mode,
+       #   int m, int n,
+       #   const cuComplex *A, int lda,
+       #   const cuComplex *X, int incx,
+       #   cuComplex *C, int ldc)
+       function dgmm!(mode::BlasChar,
+                      A::CudaMatrix{$elty},
+                      X::CudaVector{$elty},
+                      C::CudaMatrix{$elty})
+           cuside = cublasside(mode)
+           m, n = size(C)
+           mA, nA = size(A)
+           lx = length(X)
+           if ((mA != m) || (nA != n )) throw(DimensionMismatch("")) end
+           if ((mode == 'L') && (lx != m)) throw(DimensionMismatch("")) end
+           if ((mode == 'R') && (lx != n)) throw(DimensionMismatch("")) end
+           lda = max(1,stride(A,2))
+           incx = stride(X,1)
+           ldc = max(1,stride(C,2))
+           statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
+                             (cublasHandle_t, cublasSideMode_t, Cint, Cint,
+                             Ptr{$elty}, Cint, Ptr{$elty}, Cint, Ptr{$elty}, Cint), cublashandle[1],
+                             cuside, m, n, A, lda, X, incx, C, ldc))
+           C
+       end
+       function dgmm(mode::BlasChar,
+                     A::CudaMatrix{$elty},
+                     X::CudaVector{$elty})
+           m,n = size(A)
+           dgmm!( mode, A, X, similar(A, $elty, (m,n) ) )
+       end
+    end
+end

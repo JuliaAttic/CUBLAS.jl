@@ -50,17 +50,17 @@ CUBLAS functions:
 * [x] symv (in julia/blas.jl)
 * [x] syr (in julia/blas.jl)
 * [ ] syr2
-* [ ] tbmv
-* [ ] tbsv
+* [x] tbmv
+* [x] tbsv
 * [ ] tpmv
 * [ ] tpsv
 * [x] trmv (in julia/blas.jl)
 * [x] trsv (in julia/blas.jl)
 * [x] hemv (in julia/blas.jl)
-* [ ] hbmv
+* [x] hbmv
 * [ ] hpmv
 * [x] her (in julia/blas.jl)
-* [ ] her2
+* [x] her2
 * [ ] hpr
 * [ ] hpr2
 
@@ -69,26 +69,26 @@ CUBLAS functions:
 CUBLAS functions:
 
 * [x] gemm (in julia/blas.jl)
-* [ ] gemmBatched
+* [x] gemmBatched
 * [x] symm (in julia/blas.jl)
 * [x] syrk (in julia/blas.jl)
 * [x] syr2k (in julia/blas.jl)
 * [ ] syrkx
 * [x] trmm (in julia/blas.jl)
 * [x] trsm (in julia/blas.jl)
-* [ ] trsmBatched
-* [ ] hemm
+* [x] trsmBatched
+* [x] hemm
 * [x] herk (in julia/blas.jl)
 * [x] her2k (in julia/blas.jl)
 * [ ] herkx
 
 ## BLAS-like extensions
 
-* [ ] geam
-* [ ] dgmm
-* [ ] getrfBatched
-* [ ] getriBatched
-* [ ] geqrfBatched
-* [ ] gelsBatched
+* [x] geam
+* [x] dgmm
+* [x] getrfBatched
+* [x] getriBatched
+* [x] geqrfBatched
+* [x] gelsBatched
 * [ ] tpttr
 * [ ] trttp

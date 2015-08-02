@@ -8,6 +8,7 @@
 #
 
 module CUBLAS
+using Compat
 importall Base.LinAlg.BLAS
 
 using CUDArt
@@ -71,7 +72,7 @@ function statuscheck(status)
 end
 
 # find the cublas library
-const libcublas = find_library(["libcublas"], ["/usr/local/cuda"])
+const libcublas = Libdl.find_library(["libcublas"], ["/usr/local/cuda"])
 if isempty(libcublas)
     error("CUBLAS library cannot be found")
 end

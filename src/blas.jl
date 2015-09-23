@@ -66,9 +66,9 @@ for (fname, elty) in ((:cublasDcopy_v2,:Float64),
     @eval begin
         # SUBROUTINE DCOPY(N,DX,INCX,DY,INCY)
         function blascopy!(n::Integer,
-                           DX::Union(CudaPtr{$elty},CudaArray{$elty}),
+                           DX::Union{CudaPtr{$elty},CudaArray{$elty}},
                            incx::Integer,
-                           DY::Union(CudaPtr{$elty},CudaArray{$elty}),
+                           DY::Union{CudaPtr{$elty},CudaArray{$elty}},
                            incy::Integer)
               statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                                 (cublasHandle_t, Cint, Ptr{$elty}, Cint,
@@ -88,7 +88,7 @@ for (fname, elty) in ((:cublasDscal_v2,:Float64),
         # SUBROUTINE DSCAL(N,DA,DX,INCX)
         function scal!(n::Integer,
                        DA::$elty,
-                       DX::Union(CudaPtr{$elty},CudaArray{$elty}),
+                       DX::Union{CudaPtr{$elty},CudaArray{$elty}},
                        incx::Integer)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Ptr{$elty},
@@ -107,7 +107,7 @@ for (fname, elty, celty) in ((:cublasSscal_v2, :Float32, :Complex64),
         # SUBROUTINE DSCAL(N,DA,DX,INCX)
         function scal!(n::Integer,
                        DA::$elty,
-                       DX::Union(CudaPtr{$celty},CudaArray{$celty}),
+                       DX::Union{CudaPtr{$celty},CudaArray{$celty}},
                        incx::Integer)
             #DY = reinterpret($elty,DX,(2*n,))
             #$(cublascall(fname))(cublashandle[1],2*n,[DA],DY,incx)
@@ -135,9 +135,9 @@ for (jname, fname, elty) in ((:dot,:cublasDdot_v2,:Float64),
                              (:dotu,:cublasCdotu_v2,:Complex64))
     @eval begin
         function $jname(n::Integer,
-                        DX::Union(CudaPtr{$elty},CudaArray{$elty}),
+                        DX::Union{CudaPtr{$elty},CudaArray{$elty}},
                         incx::Integer,
-                        DY::Union(CudaPtr{$elty},CudaArray{$elty}),
+                        DY::Union{CudaPtr{$elty},CudaArray{$elty}},
                         incy::Integer)
             result = Array($elty,1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -149,17 +149,17 @@ for (jname, fname, elty) in ((:dot,:cublasDdot_v2,:Float64),
     end
 end
 # TODO: inspect blas.jl in julia to correct types here (dot{c,u})
-function dot{T<:Union(Float32,Float64)}(DX::CudaArray{T}, DY::CudaArray{T})
+function dot{T<:Union{Float32,Float64}}(DX::CudaArray{T}, DY::CudaArray{T})
     n = length(DX)
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
     dot(n, DX, 1, DY, 1)
 end
-function dotc{T<:Union(Complex64,Complex128)}(DX::CudaArray{T}, DY::CudaArray{T})
+function dotc{T<:Union{Complex64,Complex128}}(DX::CudaArray{T}, DY::CudaArray{T})
     n = length(DX)
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
     dotc(n, DX, 1, DY, 1)
 end
-function dotu{T<:Union(Complex64,Complex128)}(DX::CudaArray{T}, DY::CudaArray{T})
+function dotu{T<:Union{Complex64,Complex128}}(DX::CudaArray{T}, DY::CudaArray{T})
     n = length(DX)
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
     dotu(n, DX, 1, DY, 1)
@@ -173,7 +173,7 @@ for (fname, elty, ret_type) in ((:cublasDnrm2_v2,:Float64,:Float64),
     @eval begin
         # SUBROUTINE DNRM2(N,X,INCX)
         function nrm2(n::Integer,
-                      X::Union(CudaPtr{$elty},CudaArray{$elty}),
+                      X::Union{CudaPtr{$elty},CudaArray{$elty}},
                       incx::Integer)
             result = Array($ret_type,1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -196,7 +196,7 @@ for (fname, elty, ret_type) in ((:cublasDasum_v2,:Float64,:Float64),
     @eval begin
         # SUBROUTINE ASUM(N, X, INCX)
         function asum(n::Integer,
-                      X::Union(CudaPtr{$elty},CudaArray{$elty}),
+                      X::Union{CudaPtr{$elty},CudaArray{$elty}},
                       incx::Integer)
             result = Array($ret_type,1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -228,9 +228,9 @@ for (fname, elty) in ((:cublasDaxpy_v2,:Float64),
         #   int incy);
         function axpy!(n::Integer,
                        alpha::($elty),
-                       dx::Union(CudaPtr{$elty},CudaArray{$elty}),
+                       dx::Union{CudaPtr{$elty},CudaArray{$elty}},
                        incx::Integer,
-                       dy::Union(CudaPtr{$elty},CudaArray{$elty}),
+                       dy::Union{CudaPtr{$elty},CudaArray{$elty}},
                        incy::Integer)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Ptr{$elty},
@@ -251,9 +251,9 @@ end
 
 function axpy!{T<:CublasFloat,Ta<:Number,Ti<:Integer}(alpha::Ta,
                                                       x::CudaArray{T},
-                                                      rx::Union(UnitRange{Ti},Range{Ti}),
+                                                      rx::Union{UnitRange{Ti},Range{Ti}},
                                                       y::CudaArray{T},
-                                                      ry::Union(UnitRange{Ti},Range{Ti}))
+                                                      ry::Union{UnitRange{Ti},Range{Ti}})
     length(rx)==length(ry) || throw(DimensionMismatch(""))
     if minimum(rx) < 1 || maximum(rx) > length(x) || minimum(ry) < 1 || maximum(ry) > length(y)
         throw(BoundsError())
@@ -271,7 +271,7 @@ for (fname, elty) in ((:cublasIdamax_v2,:Float64),
                       (:cublasIcamax_v2,:Complex64))
     @eval begin
         function iamax(n::Integer,
-                       dx::Union(CudaPtr{$elty}, CudaArray{$elty}),
+                       dx::Union{CudaPtr{$elty}, CudaArray{$elty}},
                        incx::Integer)
             result = Array(Cint,1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -292,7 +292,7 @@ for (fname, elty) in ((:cublasIdamin_v2,:Float64),
                       (:cublasIcamin_v2,:Complex64))
     @eval begin
         function iamin(n::Integer,
-                       dx::Union(CudaPtr{$elty}, CudaArray{$elty}),
+                       dx::Union{CudaPtr{$elty}, CudaArray{$elty}},
                        incx::Integer)
             result = Array(Cint,1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,

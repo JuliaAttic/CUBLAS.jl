@@ -26,10 +26,9 @@ function test_blascopy!{T}(A::Array{T})
     B = to_host(d_B)
     @test A == B
 end
-test_blascopy!(Float32[1:m])
-test_blascopy!(Float64[1:m])
-test_blascopy!(Float32[1:m]+im*Float32[1:m])
-test_blascopy!(Float64[1:m]+im*Float64[1:m])
+for elty in (Float32, Float64, Complex64, Complex128)
+    test_blascopy!(convert(Vector{elty},collect(1:m)))
+end
 
 # test scal!
 function test_scal!{T}(alpha,A::Array{T})
@@ -40,12 +39,14 @@ function test_scal!{T}(alpha,A::Array{T})
     A1 = to_host(d_A)
     @test_approx_eq(alpha*A,A1)
 end
-test_scal!(2.0f0,Float32[1:m])
-test_scal!(2.0,Float64[1:m])
-test_scal!(1.0f0+im*1.0f0,Float32[1:m]+im*Float32[1:m])
-test_scal!(1.0+im*1.0,Float64[1:m]+im*Float64[1:m])
-test_scal!(2.0f0,Float32[1:m]+im*Float32[1:m])
-test_scal!(2.0,Float64[1:m]+im*Float64[1:m])
+m32 = convert(Vector{Float32},collect(1:m))
+m64 = convert(Vector{Float64},collect(1:m))
+test_scal!(2.0f0,m32)
+test_scal!(2.0,m64)
+test_scal!(1.0f0 + im*1.0f0,complex(m32,m32))
+test_scal!(2.0f0,complex(m32,m32))
+test_scal!(1.0+im*1.0,complex(m64,m64))
+test_scal!(2.0,complex(m64,m64))
 
 # test dot
 function test_dot(A,B)
@@ -61,8 +62,9 @@ function test_dot(A,B)
     @test_approx_eq(cuda_dot1,host_dot)
     @test_approx_eq(cuda_dot2,host_dot)
 end
-test_dot(Float32[1:m],Float32[1:m])
-test_dot(Float64[1:m],Float64[1:m])
+for elty in (Float32, Float64)
+    test_dot(convert(Vector{elty},collect(1:m)),convert(Vector{elty},collect(1:m)))
+end
 
 # test dotu
 function test_dotu(A,B)
@@ -125,8 +127,9 @@ function test_asum(A)
     @test_approx_eq(cuda_asum1,host_asum)
     @test_approx_eq(cuda_asum2,host_asum)
 end
-test_asum(Float32[1:m])
-test_asum(Float64[1:m])
+for elty in (Float32, Float64)
+    test_asum(convert(Vector{elty},collect(1:m)))
+end
 test_asum(rand(Complex64,m))
 test_asum(rand(Complex128,m))
 
@@ -1589,7 +1592,7 @@ function test_getrf_batched!(elty)
     pivot, info = CUBLAS.getrf_batched!(d_A, false)
     h_info = to_host(info)
     for As in 1:length(d_A)
-        C   = lufact(A[As],pivot=false)
+        C   = lufact(A[As],Val{false})
         h_A = to_host(d_A[As])
         #reconstruct L,U
         dL = eye(elty,m)
@@ -1648,7 +1651,7 @@ function test_getrf_batched(elty)
     pivot, info, d_B = CUBLAS.getrf_batched(d_A, false)
     h_info = to_host(info)
     for Bs in 1:length(d_B)
-        C   = lufact(A[Bs],pivot=false)
+        C   = lufact(A[Bs],Val{false})
         h_B = to_host(d_B[Bs])
         #reconstruct L,U
         dL = eye(elty,m)

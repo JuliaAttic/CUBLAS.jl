@@ -54,7 +54,7 @@ function cublasGetMatrixAsync(rows, cols, elemSize, A, lda, B, ldb, stream)
   statuscheck(ccall( (:cublasGetMatrixAsync, libcublas), cublasStatus_t, (Cint, Cint, Cint, Ptr{None}, Cint, Ptr{None}, Cint, cudaStream_t), rows, cols, elemSize, A, lda, B, ldb, stream))
 end
 function cublasXerbla(srName, info)
-  ccall( (:cublasXerbla, libcublas), None, (Ptr{Uint8}, Cint), srName, info)
+  ccall( (:cublasXerbla, libcublas), None, (Ptr{UInt8}, Cint), srName, info)
 end
 function cublasSnrm2_v2(handle, n, x, incx, result)
   statuscheck(ccall( (:cublasSnrm2_v2, libcublas), cublasStatus_t, (cublasHandle_t, Cint, Ptr{Cfloat}, Cint, Ptr{Cfloat}), handle, n, x, incx, result))

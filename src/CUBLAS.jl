@@ -86,5 +86,6 @@ cublasCreate_v2(cublashandle)
 atexit(()->cublasDestroy_v2(cublashandle[1]))
 
 include("blas.jl")
+include("highlevel.jl")
 
 end # module

@@ -1,4 +1,3 @@
-import Base.dot
 import Base.LinAlg.BLAS
 using CUBLAS
 using CUDArt
@@ -39,6 +38,15 @@ function test_scal!{T}(alpha,A::Array{T})
     CUBLAS.scal!(n1,alpha,d_A,1)
     A1 = to_host(d_A)
     @test_approx_eq(alpha*A,A1)
+
+    d_A = CudaArray(A)
+    d_As = scale(d_A, alpha)
+    A1 = to_host(d_As)
+    @test_approx_eq(alpha*A,A1)
+
+    scale!(d_A, alpha)
+    A1 = to_host(d_As)
+    @test_approx_eq(alpha*A,A1)
 end
 test_scal!(2.0f0,Float32[1:m;])
 test_scal!(2.0,Float64[1:m;])
@@ -60,9 +68,14 @@ function test_dot(A,B)
     host_dot = dot(A,B)
     @test_approx_eq(cuda_dot1,host_dot)
     @test_approx_eq(cuda_dot2,host_dot)
+
+    cuda_dot3 = CUBLAS.dot(d_A, 3:5, d_B, 5:7)
+    host_dot3 = dot(A, 3:5, B, 5:7)
+    @test_approx_eq(cuda_dot3, host_dot3)
 end
 test_dot(Float32[1:m;],Float32[1:m;])
 test_dot(Float64[1:m;],Float64[1:m;])
+
 
 # test dotu
 function test_dotu(A,B)
@@ -77,9 +90,11 @@ function test_dotu(A,B)
     host_dot = A.'*B
     @test_approx_eq(cuda_dot1,host_dot)
     @test_approx_eq(cuda_dot2,host_dot)
+    @test_approx_eq(d_A.'*d_B, host_dot)
 end
 test_dotu(rand(Complex64,m),rand(Complex64,m))
 test_dotu(rand(Complex128,m),rand(Complex128,m))
+
 
 # test dotc
 function test_dotc(A,B)
@@ -94,9 +109,11 @@ function test_dotc(A,B)
     host_dot = A'*B
     @test_approx_eq(cuda_dot1,host_dot)
     @test_approx_eq(cuda_dot2,host_dot)
+    @test_approx_eq(d_A'*d_B, host_dot)
 end
 test_dotc(rand(Complex64,m),rand(Complex64,m))
 test_dotc(rand(Complex128,m),rand(Complex128,m))
+
 
 # test nrm2
 function test_nrm2(A)
@@ -105,14 +122,17 @@ function test_nrm2(A)
     d_A = CudaArray(A)
     cuda_nrm2_1 = CUBLAS.nrm2(n1,d_A,1)
     cuda_nrm2_2 = CUBLAS.nrm2(d_A)
+    cuda_nrm2_3 = norm(d_A)
     host_nrm2 = norm(A)
     @test_approx_eq(cuda_nrm2_1,host_nrm2)
     @test_approx_eq(cuda_nrm2_2,host_nrm2)
+    @test_approx_eq(cuda_nrm2_3,host_nrm2)
 end
 test_nrm2(rand(Float32,m))
 test_nrm2(rand(Float64,m))
 test_nrm2(rand(Complex64,m))
 test_nrm2(rand(Complex128,m))
+
 
 # test asum
 function test_asum(A)
@@ -223,6 +243,7 @@ function test_gemv!(elty)
     beta = convert(elty,1)
     A = rand(elty,m,n)
     d_A = CudaArray(A)
+
     # test y = A*x + y
     x = rand(elty,n)
     d_x = CudaArray(x)
@@ -232,6 +253,10 @@ function test_gemv!(elty)
     CUBLAS.gemv!('N',alpha,d_A,d_x,beta,d_y)
     h_y = to_host(d_y)
     @test_approx_eq(y,h_y)
+    A_mul_B!(d_y,d_A,d_x)
+    h_y = to_host(d_y)
+    @test_approx_eq(h_y,A*x)
+
     # test x = A.'*y + x
     x = rand(elty,n)
     d_x = CudaArray(x)
@@ -241,6 +266,10 @@ function test_gemv!(elty)
     CUBLAS.gemv!('T',alpha,d_A,d_y,beta,d_x)
     h_x = to_host(d_x)
     @test_approx_eq(x,h_x)
+    At_mul_B!(d_x,d_A,d_y)
+    h_x = to_host(d_x)
+    @test_approx_eq(h_x,A.'*y)
+
     # test x = A'*y + x
     x = rand(elty,n)
     d_x = CudaArray(x)
@@ -250,11 +279,15 @@ function test_gemv!(elty)
     CUBLAS.gemv!('C',alpha,d_A,d_y,beta,d_x)
     h_x = to_host(d_x)
     @test_approx_eq(x,h_x)
+    Ac_mul_B!(d_x,d_A,d_y)
+    h_x = to_host(d_x)
+    @test_approx_eq(h_x,A'*y)
 end
 test_gemv!(Float32)
 test_gemv!(Float64)
 test_gemv!(Complex64)
 test_gemv!(Complex128)
+
 
 # test gemv
 function test_gemv(elty)
@@ -272,6 +305,8 @@ function test_gemv(elty)
     h_y2 = to_host(d_y2)
     @test_approx_eq(y1,h_y1)
     @test_approx_eq(y2,h_y2)
+    @test_approx_eq(y2, to_host(d_A * d_x))
+
     # test x = alpha*(A.'*y)
     y = rand(elty,m)
     d_y = CudaArray(y)
@@ -283,6 +318,8 @@ function test_gemv(elty)
     h_x2 = to_host(d_x2)
     @test_approx_eq(x1,h_x1)
     @test_approx_eq(x2,h_x2)
+    @test_approx_eq(x2, to_host(d_A.' * d_y))
+
     # test x = alpha*(A'*y)
     y = rand(elty,m)
     d_y = CudaArray(y)
@@ -294,6 +331,7 @@ function test_gemv(elty)
     h_x2 = to_host(d_x2)
     @test_approx_eq(x1,h_x1)
     @test_approx_eq(x2,h_x2)
+    @test_approx_eq(x2, to_host(d_A' * d_y))
 end
 test_gemv(Float32)
 test_gemv(Float64)
@@ -929,22 +967,30 @@ function test_gemm!(elty)
     # generate matrices
     A = rand(elty,m,k)
     B = rand(elty,k,n)
-    C = rand(elty,m,n)
+    C1 = rand(elty,m,n)
+    C2 = copy(C1)
     # move to device
     d_A = CudaArray(A)
     d_B = CudaArray(B)
-    d_C = CudaArray(C)
+    d_C1 = CudaArray(C1)
+    d_C2 = CudaArray(C2)
     # C = (alpha*A)*B + beta*C
-    CUBLAS.gemm!('N','N',alpha,d_A,d_B,beta,d_C)
-    C = (alpha*A)*B + beta*C
+    CUBLAS.gemm!('N','N',alpha,d_A,d_B,beta,d_C1)
+    A_mul_B!(d_C2, d_A, d_B)
+    h_C1 = to_host(d_C1)
+    h_C2 = to_host(d_C2)
+    C1 = (alpha*A)*B + beta*C1
+    C2 = A*B
     # compare
-    h_C = to_host(d_C)
-    @test_approx_eq(C,h_C)
+    @test_approx_eq(C1,h_C1)
+    @test_approx_eq(C2,h_C2)
+
 end
 test_gemm!(Float32)
 test_gemm!(Float64)
 test_gemm!(Complex64)
 test_gemm!(Complex128)
+
 
 function test_gemm(elty)
     # generate matrices
@@ -956,9 +1002,12 @@ function test_gemm(elty)
     # C = (alpha*A)*B + beta*C
     d_C = CUBLAS.gemm('N','N',d_A,d_B)
     C = A*B
+    C2 = d_A * d_B
     # compare
     h_C = to_host(d_C)
+    h_C2 = to_host(d_C)
     @test_approx_eq(C,h_C)
+    @test_approx_eq(C,h_C2)
 end
 test_gemm(Float32)
 test_gemm(Float64)
@@ -1512,8 +1561,8 @@ function test_geam!(elty)
     # move to host and compare
     h_C = to_host(d_C)
     @test_approx_eq(C,h_C)
-   
-    #test in place versions too 
+
+    #test in place versions too
     C = rand(elty,m,n)
     d_C = CudaArray(C)
     C = alpha*C + beta*B
@@ -1629,7 +1678,7 @@ function test_getrf_batched!(elty)
             P[row,:] = P[h_pivot[row,As],:]
             P[h_pivot[row,As],:] = temp
         end
-        @test_approx_eq(inv(P)*dL*dU, inv(C[:P]) * C[:L] * C[:U]) 
+        @test_approx_eq(inv(P)*dL*dU, inv(C[:P]) * C[:L] * C[:U])
     end
 end
 test_getrf_batched!(Float32)
@@ -1885,3 +1934,4 @@ test_dgmm(Float32)
 test_dgmm(Float64)
 test_dgmm(Complex64)
 test_dgmm(Complex128)
+

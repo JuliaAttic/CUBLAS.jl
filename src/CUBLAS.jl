@@ -81,8 +81,6 @@ include("libcublas.jl")
 # setup cublas handle
 cublashandle = cublasHandle_t[0]
 cublasCreate_v2(cublashandle)
-# destroy cublas handle at julia exit
-atexit(()->cublasDestroy_v2(cublashandle[1]))
 
 include("blas.jl")
 

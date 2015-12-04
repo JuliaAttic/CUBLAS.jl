@@ -54,6 +54,8 @@ const CUBLAS_ATOMICS_ALLOWED = 1
 # end enum cublasAtomicsMode_t
 typealias cublasContext Void
 typealias cublasHandle_t Ptr{cublasContext}
+typealias cudaStream Void
+typealias cudaStream_t Ptr{cudaStream}
 # complex numbers in cuda
 typealias cuComplex Complex{Float32}
 typealias cuDoubleComplex Complex{Float64}

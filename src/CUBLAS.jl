@@ -83,7 +83,7 @@ end
 include("libcublas.jl")
 
 # setup cublas handle
-cublashandle = cublasHandle_t[0]
+const cublashandle = cublasHandle_t[0]
 function __init__()
   cublasCreate_v2(cublashandle)
   # destroy cublas handle at the end of this scope

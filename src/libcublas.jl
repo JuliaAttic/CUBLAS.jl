@@ -11,11 +11,11 @@ end
 function cublasGetVersion_v2(handle, version)
   statuscheck(ccall( (:cublasGetVersion_v2, libcublas), cublasStatus_t, (cublasHandle_t, Ptr{Cint}), handle, version))
 end
-function cublasSetStream_v2(handle, streamId)
-  statuscheck(ccall( (:cublasSetStream_v2, libcublas), cublasStatus_t, (cublasHandle_t, cudaStream_t), handle, streamId))
-end
 function cublasGetStream_v2(handle, streamId)
   statuscheck(ccall( (:cublasGetStream_v2, libcublas), cublasStatus_t, (cublasHandle_t, Ptr{cudaStream_t}), handle, streamId))
+end
+function cublasSetStream_v2(handle, streamId)
+  statuscheck(ccall( (:cublasSetStream_v2, libcublas), cublasStatus_t, (cublasHandle_t, cudaStream_t), handle, streamId))
 end
 function cublasGetPointerMode_v2(handle, mode)
   statuscheck(ccall( (:cublasGetPointerMode_v2, libcublas), cublasStatus_t, (cublasHandle_t, Ptr{cublasPointerMode_t}), handle, mode))
@@ -30,31 +30,31 @@ function cublasSetAtomicsMode(handle, mode)
   statuscheck(ccall( (:cublasSetAtomicsMode, libcublas), cublasStatus_t, (cublasHandle_t, cublasAtomicsMode_t), handle, mode))
 end
 function cublasSetVector(n, elemSize, x, incx, devicePtr, incy)
-  statuscheck(ccall( (:cublasSetVector, libcublas), cublasStatus_t, (Cint, Cint, Ptr{None}, Cint, Ptr{None}, Cint), n, elemSize, x, incx, devicePtr, incy))
+  statuscheck(ccall( (:cublasSetVector, libcublas), cublasStatus_t, (Cint, Cint, Ptr{Void}, Cint, Ptr{Void}, Cint), n, elemSize, x, incx, devicePtr, incy))
 end
 function cublasGetVector(n, elemSize, x, incx, y, incy)
-  statuscheck(ccall( (:cublasGetVector, libcublas), cublasStatus_t, (Cint, Cint, Ptr{None}, Cint, Ptr{None}, Cint), n, elemSize, x, incx, y, incy))
+  statuscheck(ccall( (:cublasGetVector, libcublas), cublasStatus_t, (Cint, Cint, Ptr{Void}, Cint, Ptr{Void}, Cint), n, elemSize, x, incx, y, incy))
 end
 function cublasSetMatrix(rows, cols, elemSize, A, lda, B, ldb)
-  statuscheck(ccall( (:cublasSetMatrix, libcublas), cublasStatus_t, (Cint, Cint, Cint, Ptr{None}, Cint, Ptr{None}, Cint), rows, cols, elemSize, A, lda, B, ldb))
+  statuscheck(ccall( (:cublasSetMatrix, libcublas), cublasStatus_t, (Cint, Cint, Cint, Ptr{Void}, Cint, Ptr{Void}, Cint), rows, cols, elemSize, A, lda, B, ldb))
 end
 function cublasGetMatrix(rows, cols, elemSize, A, lda, B, ldb)
-  statuscheck(ccall( (:cublasGetMatrix, libcublas), cublasStatus_t, (Cint, Cint, Cint, Ptr{None}, Cint, Ptr{None}, Cint), rows, cols, elemSize, A, lda, B, ldb))
+  statuscheck(ccall( (:cublasGetMatrix, libcublas), cublasStatus_t, (Cint, Cint, Cint, Ptr{Void}, Cint, Ptr{Void}, Cint), rows, cols, elemSize, A, lda, B, ldb))
 end
 function cublasSetVectorAsync(n, elemSize, hostPtr, incx, devicePtr, incy, stream)
-  statuscheck(ccall( (:cublasSetVectorAsync, libcublas), cublasStatus_t, (Cint, Cint, Ptr{None}, Cint, Ptr{None}, Cint, cudaStream_t), n, elemSize, hostPtr, incx, devicePtr, incy, stream))
+  statuscheck(ccall( (:cublasSetVectorAsync, libcublas), cublasStatus_t, (Cint, Cint, Ptr{Void}, Cint, Ptr{Void}, Cint, cudaStream_t), n, elemSize, hostPtr, incx, devicePtr, incy, stream))
 end
 function cublasGetVectorAsync(n, elemSize, devicePtr, incx, hostPtr, incy, stream)
-  statuscheck(ccall( (:cublasGetVectorAsync, libcublas), cublasStatus_t, (Cint, Cint, Ptr{None}, Cint, Ptr{None}, Cint, cudaStream_t), n, elemSize, devicePtr, incx, hostPtr, incy, stream))
+  statuscheck(ccall( (:cublasGetVectorAsync, libcublas), cublasStatus_t, (Cint, Cint, Ptr{Void}, Cint, Ptr{Void}, Cint, cudaStream_t), n, elemSize, devicePtr, incx, hostPtr, incy, stream))
 end
 function cublasSetMatrixAsync(rows, cols, elemSize, A, lda, B, ldb, stream)
-  statuscheck(ccall( (:cublasSetMatrixAsync, libcublas), cublasStatus_t, (Cint, Cint, Cint, Ptr{None}, Cint, Ptr{None}, Cint, cudaStream_t), rows, cols, elemSize, A, lda, B, ldb, stream))
+  statuscheck(ccall( (:cublasSetMatrixAsync, libcublas), cublasStatus_t, (Cint, Cint, Cint, Ptr{Void}, Cint, Ptr{Void}, Cint, cudaStream_t), rows, cols, elemSize, A, lda, B, ldb, stream))
 end
 function cublasGetMatrixAsync(rows, cols, elemSize, A, lda, B, ldb, stream)
-  statuscheck(ccall( (:cublasGetMatrixAsync, libcublas), cublasStatus_t, (Cint, Cint, Cint, Ptr{None}, Cint, Ptr{None}, Cint, cudaStream_t), rows, cols, elemSize, A, lda, B, ldb, stream))
+  statuscheck(ccall( (:cublasGetMatrixAsync, libcublas), cublasStatus_t, (Cint, Cint, Cint, Ptr{Void}, Cint, Ptr{Void}, Cint, cudaStream_t), rows, cols, elemSize, A, lda, B, ldb, stream))
 end
 function cublasXerbla(srName, info)
-  ccall( (:cublasXerbla, libcublas), None, (Ptr{UInt8}, Cint), srName, info)
+  ccall( (:cublasXerbla, libcublas), Void, (Ptr{UInt8}, Cint), srName, info)
 end
 function cublasSnrm2_v2(handle, n, x, incx, result)
   statuscheck(ccall( (:cublasSnrm2_v2, libcublas), cublasStatus_t, (cublasHandle_t, Cint, Ptr{Cfloat}, Cint, Ptr{Cfloat}), handle, n, x, incx, result))

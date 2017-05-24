@@ -94,9 +94,15 @@ end
         cuda_dot1 = CUBLAS.dotu(n1,d_A,1,d_B,1)
         cuda_dot2 = CUBLAS.dotu(d_A,d_B)
         host_dot = A.'*B
-        @test host_dot ≈ cuda_dot1
-        @test host_dot ≈ cuda_dot2
-        @test host_dot ≈ (d_A.'*d_B)[1]
+        if VERSION < v"0.6.0"
+            @test host_dot[1] ≈ cuda_dot1
+            @test host_dot[1] ≈ cuda_dot2
+            @test host_dot ≈ (d_A.'*d_B)
+        else
+            @test host_dot ≈ cuda_dot1
+            @test host_dot ≈ cuda_dot2
+            @test host_dot ≈ (d_A.'*d_B)[1]
+        end
     end
 end
 
@@ -113,9 +119,15 @@ end
         cuda_dot1 = CUBLAS.dotc(n1,d_A,1,d_B,1)
         cuda_dot2 = CUBLAS.dotc(d_A,d_B)
         host_dot = A'*B
-        @test host_dot ≈ cuda_dot1
-        @test host_dot ≈ cuda_dot2
-        @test host_dot ≈ (d_A'*d_B)[1]
+        if VERSION < v"0.6.0"
+            @test host_dot[1] ≈ cuda_dot1
+            @test host_dot[1] ≈ cuda_dot2
+            @test host_dot ≈ (d_A'*d_B)
+        else
+            @test host_dot ≈ cuda_dot1
+            @test host_dot ≈ cuda_dot2
+            @test host_dot ≈ (d_A'*d_B)[1]
+        end
     end
 end
 

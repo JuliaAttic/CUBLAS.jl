@@ -8,7 +8,7 @@ n = 35
 k = 13
 
 function blasabs(A)
-    return abs(real(A)) + abs(imag(A))
+    return abs.(real(A)) + abs.(imag(A))
 end
 
 #################
@@ -94,7 +94,7 @@ end
         cuda_dot1 = CUBLAS.dotu(n1,d_A,1,d_B,1)
         cuda_dot2 = CUBLAS.dotu(d_A,d_B)
         host_dot = A.'*B
-        if VERSION < v"0.6.0"
+        if VERSION < v"0.6.0-pre"
             @test host_dot[1] ≈ cuda_dot1
             @test host_dot[1] ≈ cuda_dot2
             @test host_dot ≈ (d_A.'*d_B)
@@ -119,7 +119,7 @@ end
         cuda_dot1 = CUBLAS.dotc(n1,d_A,1,d_B,1)
         cuda_dot2 = CUBLAS.dotc(d_A,d_B)
         host_dot = A'*B
-        if VERSION < v"0.6.0"
+        if VERSION < v"0.6.0-pre"
             @test host_dot[1] ≈ cuda_dot1
             @test host_dot[1] ≈ cuda_dot2
             @test host_dot ≈ (d_A'*d_B)
@@ -155,7 +155,7 @@ end
         d_A = CudaArray(A)
         cuda_asum1 = CUBLAS.asum(n1,d_A,1)
         cuda_asum2 = CUBLAS.asum(d_A)
-        host_asum = sum(abs(real(A)) + abs(imag(A)))
+        host_asum = sum(abs.(real(A)) + abs.(imag(A)))
         @test host_asum ≈ cuda_asum1
         @test host_asum ≈ cuda_asum2
     end
@@ -1468,8 +1468,8 @@ end
                 dU += triu(h_A,k)
             end
             #compare
-            @test C[:L] ≈ dL
-            @test C[:U] ≈ dU
+            @test isapprox(C[:L], dL, rtol=1e-2)
+            @test isapprox(C[:U], dU, rtol=1e-2)
         end
         for i in 1:length(A)
             d_A[ i ] = CudaArray(A[i])
@@ -1525,8 +1525,8 @@ end
                 dL += tril(h_B,-k-1)
             end
             #compare
-            @test C[:L] ≈ dL
-            @test C[:U] ≈ dU
+            @test isapprox(C[:L], dL, rtol=1e-2)
+            @test isapprox(C[:U], dU, rtol=1e-2)
         end
     end
 end

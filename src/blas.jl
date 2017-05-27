@@ -139,7 +139,7 @@ for (jname, fname, elty) in ((:dot,:cublasDdot_v2,:Float64),
                         incx::Integer,
                         DY::Union{CudaPtr{$elty},CudaArray{$elty}},
                         incy::Integer)
-            result = Array($elty,1)
+            result = Array{$elty}(1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Cint,
                                Ptr{$elty}, Cint, Ptr{$elty}),
@@ -175,7 +175,7 @@ for (fname, elty, ret_type) in ((:cublasDnrm2_v2,:Float64,:Float64),
         function nrm2(n::Integer,
                       X::Union{CudaPtr{$elty},CudaArray{$elty}},
                       incx::Integer)
-            result = Array($ret_type,1)
+            result = Array{$ret_type}(1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Cint,
                                Ptr{$ret_type}),
@@ -198,7 +198,7 @@ for (fname, elty, ret_type) in ((:cublasDasum_v2,:Float64,:Float64),
         function asum(n::Integer,
                       X::Union{CudaPtr{$elty},CudaArray{$elty}},
                       incx::Integer)
-            result = Array($ret_type,1)
+            result = Array{$ret_type}(1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Cint,
                                Ptr{$ret_type}),
@@ -273,7 +273,7 @@ for (fname, elty) in ((:cublasIdamax_v2,:Float64),
         function iamax(n::Integer,
                        dx::Union{CudaPtr{$elty}, CudaArray{$elty}},
                        incx::Integer)
-            result = Array(Cint,1)
+            result = Array{Cint}(1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Cint,
                                Ptr{Cint}),
@@ -294,7 +294,7 @@ for (fname, elty) in ((:cublasIdamin_v2,:Float64),
         function iamin(n::Integer,
                        dx::Union{CudaPtr{$elty}, CudaArray{$elty}},
                        incx::Integer)
-            result = Array(Cint,1)
+            result = Array{Cint}(1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Cint,
                                Ptr{Cint}),

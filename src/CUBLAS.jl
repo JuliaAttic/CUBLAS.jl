@@ -12,9 +12,9 @@ using Compat
 importall Base.LinAlg.BLAS
 
 using CUDArt
-#using CUDArt.CudaPtr
+using CUDArt.rt.cudaStream_t
 
-typealias BlasChar Char #import Base.LinAlg.BlasChar
+const BlasChar = Char #import Base.LinAlg.BlasChar
 import Base.one
 import Base.zero
 

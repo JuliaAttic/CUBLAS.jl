@@ -79,13 +79,27 @@ end
 
 include("libcublas.jl")
 
-# setup cublas handle
-cublashandle = cublasHandle_t[0]
-cublasCreate_v2(cublashandle)
-# destroy cublas handle at julia exit
-atexit(()->cublasDestroy_v2(cublashandle[1]))
+# Global CUBLAS handle used for higher-level BLAS functions.
+const cublashandle = cublasHandle_t[C_NULL]
+
+function destroy()
+    if cublashandle[1] != C_NULL
+        cublasDestroy_v2(cublashandle[1])
+        cublashandle[1] = C_NULL
+    end
+end
+
+function use_current_device()
+    destroy()
+    cublasCreate_v2(cublashandle)
+end
 
 include("blas.jl")
 include("highlevel.jl")
+
+function __init__()
+    use_current_device()
+    atexit(destroy)
+end
 
 end # module

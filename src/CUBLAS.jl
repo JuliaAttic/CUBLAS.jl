@@ -8,7 +8,7 @@
 #
 __precompile__(true)
 module CUBLAS
-using Compat
+
 importall Base.LinAlg.BLAS
 
 using CUDArt

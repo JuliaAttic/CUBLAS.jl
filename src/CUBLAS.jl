@@ -6,7 +6,7 @@
 # Created: 2014-08-27
 # License: MIT
 #
-
+__precompile__(true)
 module CUBLAS
 using Compat
 importall Base.LinAlg.BLAS
@@ -74,16 +74,19 @@ end
 # find the cublas library
 const libcublas = Libdl.find_library(["libcublas"], ["/usr/local/cuda"])
 if isempty(libcublas)
-    error("CUBLAS library cannot be found")
+    error("CUBLAS library cannot be found. Please make sure that CUDA is installed")
 end
 
 include("libcublas.jl")
 
 # setup cublas handle
-cublashandle = cublasHandle_t[0]
-cublasCreate_v2(cublashandle)
-# destroy cublas handle at julia exit
-atexit(()->cublasDestroy_v2(cublashandle[1]))
+const cublashandle = cublasHandle_t[0]
+
+function __init__()
+    cublasCreate_v2(cublashandle)
+    # destroy cublas handle at julia exit
+    atexit(()->cublasDestroy_v2(cublashandle[1]))
+end
 
 include("blas.jl")
 include("highlevel.jl")

@@ -94,7 +94,7 @@ end
         cuda_dot1 = CUBLAS.dotu(n1,d_A,1,d_B,1)
         cuda_dot2 = CUBLAS.dotu(d_A,d_B)
         host_dot = A.'*B
-        if VERSION < v"0.6.0-pre"
+        if VERSION < v"0.6.0-dev.2074" # julia PR #19670
             @test host_dot[1] ≈ cuda_dot1
             @test host_dot[1] ≈ cuda_dot2
             @test host_dot ≈ (d_A.'*d_B)
@@ -119,7 +119,7 @@ end
         cuda_dot1 = CUBLAS.dotc(n1,d_A,1,d_B,1)
         cuda_dot2 = CUBLAS.dotc(d_A,d_B)
         host_dot = A'*B
-        if VERSION < v"0.6.0-pre"
+        if VERSION < v"0.6.0-dev.2074" # julia PR #19670
             @test host_dot[1] ≈ cuda_dot1
             @test host_dot[1] ≈ cuda_dot2
             @test host_dot ≈ (d_A'*d_B)

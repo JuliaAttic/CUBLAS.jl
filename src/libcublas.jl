@@ -723,6 +723,7 @@ function cublasGemmEx(handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, 
                         cublasStatus_t,
                         (cublasHandle_t, cublasOperation_t, cublasOperation_t, Cint, Cint, Cint, Ptr{Void}, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, Cint, Ptr{void}, Ptr{Void}, cudaDataType_t, Cint, cudaDataType_t, cublasGemmAlgo_t),
                         handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc, computeType, algo));
+end
 function cublasCgemmEx(handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc)
     statuscheck(ccall((:cublasCgemmEx, libcublas),
                         cublasStatus_t,

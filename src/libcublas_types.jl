@@ -68,16 +68,16 @@ immutable __half2
     x2::__half
 end
 # specify which GEMM algorithm to use in cublasGemmEx() (CUDA 8+)
-const cublasGemmAlgo_t = UInt32;
-const CUBLAS_GEMM_DFALT = UInt32(-1);
-const CUBLAS_GEMM_ALGO0 = UInt32(0);
-const CUBLAS_GEMM_ALGO1 = UInt32(1);
-const CUBLAS_GEMM_ALGO2 = UInt32(2);
-const CUBLAS_GEMM_ALGO3 = UInt32(3);
-const CUBLAS_GEMM_ALGO4 = UInt32(4);
-const CUBLAS_GEMM_ALGO5 = UInt32(5);
-const CUBLAS_GEMM_ALGO6 = UInt32(6);
-const CUBLAS_GEMM_ALGO7 = UInt32(7);
+const cublasGemmAlgo_t = Int32;
+const CUBLAS_GEMM_DFALT = -1;
+const CUBLAS_GEMM_ALGO0 = 0;
+const CUBLAS_GEMM_ALGO1 = 1;
+const CUBLAS_GEMM_ALGO2 = 2;
+const CUBLAS_GEMM_ALGO3 = 3;
+const CUBLAS_GEMM_ALGO4 = 4;
+const CUBLAS_GEMM_ALGO5 = 5;
+const CUBLAS_GEMM_ALGO6 = 6;
+const CUBLAS_GEMM_ALGO7 = 7;
 # specify which DataType to use with cublas<t>gemmEx() and cublasGemmEx() (CUDA 8+) functions
 const cudaDataType_t = UInt32;
 const CUDA_R_16F = UInt32(2);

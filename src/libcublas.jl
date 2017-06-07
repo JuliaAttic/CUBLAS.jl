@@ -675,6 +675,7 @@ function cublasZtrttp(handle, uplo, n, A, lda, AP)
   statuscheck(ccall( (:cublasZtrttp, libcublas), cublasStatus_t, (cublasHandle_t, cublasFillMode_t, Cint, Ptr{cuDoubleComplex}, Cint, Ptr{cuDoubleComplex}), handle, uplo, n, A, lda, AP))
 end
 
+using CUDArt;
 try
     if (CUDArt.runtime_version() >= 7500)   #these functions were introduced with CUDA v7.5
         # Wrap extensions of functions (ie. Nrm2Ex, GemmEx, etc) (CUDA 7.5+)

@@ -67,6 +67,7 @@ immutable __half2
     x1::__half
     x2::__half
 end
+using CUDArt;
 try
     if (CUDArt.runtime_version() >= 7500)
         # specify which GEMM algorithm to use in cublasGemmEx() (CUDA 7.5+)

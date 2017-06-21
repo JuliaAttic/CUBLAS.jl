@@ -674,3 +674,103 @@ end
 function cublasZtrttp(handle, uplo, n, A, lda, AP)
   statuscheck(ccall( (:cublasZtrttp, libcublas), cublasStatus_t, (cublasHandle_t, cublasFillMode_t, Cint, Ptr{cuDoubleComplex}, Cint, Ptr{cuDoubleComplex}), handle, uplo, n, A, lda, AP))
 end
+
+try
+    if (CUDArt.runtime_version() >= 7500)   #these functions were introduced with CUDA v7.5
+        # Wrap extensions of functions (ie. Nrm2Ex, GemmEx, etc) (CUDA 7.5+)
+        function cublasNrm2Ex(handle, n, x, xType, incx, result, resultType, executionType)
+            statuscheck(ccall((:cublasNrm2Ex, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, Cint, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, cudaDataType_t),
+                                handle, n, x, xType, incx, result, resultType, executionType));
+        end
+        function cublasDotEx(handle, n, x, xType, incx, y, yType, incy, result, resultType, executionType)
+            statuscheck(ccall((:cublasDotEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, Cint, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, cudaDataType_t),
+                                handle, n, x, xType, incx, y, yType, incy, result, resultType, executionType));
+        end
+        function cublasDotcEx(handle, n, x, xType, incx, y, yType, incy, result, resultType, executionType)
+            statuscheck(ccall((:cublasDotcEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, Cint, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, cudaDataType_t),
+                                handle, n, x, xType, incx, y, yType, incy, result, resultType, executionType));
+        end
+        function cublasScalEx(handle, n, alpha, alphaType, x, xType, incx, executionType)
+            statuscheck(ccall((:cublasScalEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, Cint, Ptr{Void}, cudaDataType_t, Ptr{Void}, cudaDataType_t, Cint, cudaDataType_t),
+                                handle, n, alpha, alphaType, x, xType, incx, executionType));
+        end
+        function cublasAxpyEx(handle, n, alpha, alphaType, x, xType, incx, y, yType, incy, executionType)
+            statuscheck(ccall((:cublasAxpyEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, Cint, Ptr{Void}, cudaDataType_t, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, Cint, cudaDataType_t),
+                                handle, n, alpha, alphaType, x, xType, incx, y, yType, incy, executionType));
+        end
+        function cublasCgemm3mEx(handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc)
+            statuscheck(ccall((:cublasCgemm3mEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, cublasOperation_t, cublasOperation_t, Cint, Cint, Cint, Ptr{cuComplex}, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, Cint, Ptr{cuComplex}, Ptr{Void}, cudaDataType_t, Cint),
+                                handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc));
+        end
+        function cublasSgemmEx(handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc)
+            statuscheck(ccall((:cublasSgemmEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, cublasOperation_t, cublasOperation_t, Cint, Cint, Cint, Ptr{Cfloat}, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, Cint, Ptr{Cfloat}, Ptr{Void}, cudaDataType_t, Cint),
+                                handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc));
+        end
+        function cublasGemmEx(handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc, computeType, algo)
+            statuscheck(ccall((:cublasGemmEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, cublasOperation_t, cublasOperation_t, Cint, Cint, Cint, Ptr{Void}, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, Cint, Ptr{void}, Ptr{Void}, cudaDataType_t, Cint, cudaDataType_t, cublasGemmAlgo_t),
+                                handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc, computeType, algo));
+        end
+        function cublasCgemmEx(handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc)
+            statuscheck(ccall((:cublasCgemmEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, cublasOperation_t, cublasOperation_t, Cint, Cint, Cint, Ptr{cuComplex}, Ptr{Void}, cudaDataType_t, Cint, Ptr{Void}, cudaDataType_t, Cint, Ptr{cuComplex}, Ptr{Void}, cudaDataType_t, Cint),
+                                handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc));
+        end
+        function cublasCsyrkEx(handle, uplo, trans, n, k, alpha, A, Atype, lda, beta, C, Ctype, ldc)
+            statuscheck(ccall((:cublasCsyrkEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, cublasFillMode_t, cublasOperation_t, Cint, Cint, Ptr{cuComplex}, Ptr{Void}, cudaDataType_t, Cint, Ptr{cuComplex}, Ptr{Void}, cudaDataType_t, Cint),
+                                handle, uplo, trans, n, k, alpha, A, Atype, lda, beta, C, Ctype, ldc));
+        end
+        function cublasCsyrk3mEx(handle, uplo, trans, n, k, alpha, A, Atype, lda, beta, C, Ctype, ldc)
+            statuscheck(ccall((:cublasCsyrk3mEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, cublasFillMode_t, cublasOperation_t, Cint, Cint, Ptr{cuComplex}, Ptr{Void}, cudaDataType_t, Cint, Ptr{cuComplex}, Ptr{Void}, cudaDataType_t, Cint),
+                                handle, uplo, trans, n, k, alpha, A, Atype, lda, beta, C, Ctype, ldc));
+        end
+        function cublasCherkEx(handle, uplo, trans, n, k, alpha, A, Atype, lda, beta, C, Ctype, ldc)
+            statuscheck(ccall((:cublasCherkEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, cublasFillMode_t, cublasOperation_t, Cint, Cint, Ptr{Cfloat}, Ptr{Void}, cudaDataType_t, Cint, Ptr{Cfloat}, Ptr{Void}, cudaDataType_t, Cint),
+                                handle, uplo, trans, n, k, alpha, A, Atype, lda, beta, C, Ctype, ldc));
+        end
+        function cublasCherk3mEx(handle, uplo, trans, n, k, alpha, A, Atype, lda, beta, C, Ctype, ldc)
+            statuscheck(ccall((:cublasCherk3mEx, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, cublasFillMode_t, cublasOperation_t, Cint, Cint, Ptr{Cfloat}, Ptr{Void}, cudaDataType_t, Cint, Ptr{Cfloat}, Ptr{Void}, cudaDataType_t, Cint),
+                                handle, uplo, trans, n, k, alpha, A, Atype, lda, beta, C, Ctype, ldc));
+        end
+        # Wrap FP16 functions (CUDA 7.5+)
+        function cublasHgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+            statuscheck(ccall((:cublasHgemm, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, cublasOperation_t, cublasOperation_t, Cint, Cint, Cint, Ptr{__half}, Ptr{__half}, Cint, Ptr{__half}, Cint, Ptr{__half}, Ptr{__half}, Cint),
+                                handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc));
+        end
+        function cublasHgemmStridedBatched(handle, transa, transb, m, n, k, alpha, A, lda, strideA, B, ldb, strideB, beta, C, ldc, strideC, batchCount)
+            statuscheck(ccall((:cublasHgemmStridedBatched, libcublas),
+                                cublasStatus_t,
+                                (cublasHandle_t, cublasOperation_t, cublasOperation_t, Cint, Cint, Cint, Ptr{__half}, Ptr{__half}, Cint, Clonglong, Ptr{__half}, Cint, Clonglong, Ptr{__half}, Ptr{__half}, Cint, Clonglong, Cint),
+                                handle, transa, transb, m, n, k, alpha, A, lda, strideA, B, ldb, strideB, beta, C, ldc, strideC, batchCount));
+        end
+    end
+catch exception
+    Base.show_backtrace(STDOUT, backtrace());
+    println();
+end

@@ -884,6 +884,7 @@ end
 for (fname, elty) in
         ((:cublasDgemm_v2,:Float64),
          (:cublasSgemm_v2,:Float32),
+         (:cublasHgemm, :Float16),
          (:cublasZgemm_v2,:Complex128),
          (:cublasCgemm_v2,:Complex64))
     @eval begin

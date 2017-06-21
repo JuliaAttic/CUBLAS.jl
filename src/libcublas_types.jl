@@ -61,3 +61,43 @@ const cuDoubleComplex = Complex{Float64}
 const CublasFloat = Union{Float64,Float32,Complex128,Complex64}
 const CublasReal = Union{Float64,Float32}
 const CublasComplex = Union{Complex128,Complex64}
+# FP16 (cuda_fp16.h) in cuda
+const __half = Float16;
+immutable __half2
+    x1::__half
+    x2::__half
+end
+try
+    if (CUDArt.runtime_version() >= 7500)
+        # specify which GEMM algorithm to use in cublasGemmEx() (CUDA 7.5+)
+        const cublasGemmAlgo_t = Int32;
+        const CUBLAS_GEMM_DFALT = -1;
+        const CUBLAS_GEMM_ALGO0 = 0;
+        const CUBLAS_GEMM_ALGO1 = 1;
+        const CUBLAS_GEMM_ALGO2 = 2;
+        const CUBLAS_GEMM_ALGO3 = 3;
+        const CUBLAS_GEMM_ALGO4 = 4;
+        const CUBLAS_GEMM_ALGO5 = 5;
+        const CUBLAS_GEMM_ALGO6 = 6;
+        const CUBLAS_GEMM_ALGO7 = 7;
+        # specify which DataType to use with cublas<t>gemmEx() and cublasGemmEx() (CUDA 7.5+) functions
+        const cudaDataType_t = UInt32;
+        const CUDA_R_16F = UInt32(2);
+        const CUDA_C_16F = UInt32(6);
+        const CUDA_R_32F = UInt32(0);
+        const CUDA_C_32F = UInt32(4);
+        const CUDA_R_64F = UInt32(1);
+        const CUDA_C_64F = UInt32(5);
+        const CUDA_R_8I  = UInt32(3);
+        const CUDA_C_8I  = UInt32(7);
+        const CUDA_R_8U  = UInt32(8);
+        const CUDA_C_8U  = UInt32(9);
+        const CUDA_R_32I = UInt32(10);
+        const CUDA_C_32I = UInt32(11);
+        const CUDA_R_32U = UInt32(12);
+        const CUDA_C_32U = UInt32(13);
+    end
+catch exception
+    Base.show_backtrace(STDOUT, backtrace());
+    println();
+end

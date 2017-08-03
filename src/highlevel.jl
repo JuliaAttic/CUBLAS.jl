@@ -1,6 +1,6 @@
 import Base.Operators.(*)
 
-import Base: scale!, scale, norm, vecdot
+import Base: scale!, norm, vecdot
 
 import Base: A_mul_B!, At_mul_B,  Ac_mul_B,  A_mul_Bc,  At_mul_Bt,  Ac_mul_Bc,  At_mul_Bt,
                        At_mul_B!, Ac_mul_B!, A_mul_Bc!, At_mul_Bt!, Ac_mul_Bc!, At_mul_Bt!
@@ -17,7 +17,6 @@ cublas_size(t::Char, M::CudaVecOrMat) = (size(M, t=='N' ? 1:2), size(M, t=='N' ?
 # SCAL
 #######
 scale!{T<:CublasFloat}(x::CudaArray{T}, k::Number) = CUBLAS.scal!(length(x), k, x, 1)
-scale{T<:CublasFloat}(x::CudaArray{T}, k::Number) = CUBLAS.scal!(length(x), k, copy(x), 1)
 
 #######
 # DOT

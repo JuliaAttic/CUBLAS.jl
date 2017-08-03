@@ -12,7 +12,8 @@ module CUBLAS
 importall Base.LinAlg.BLAS
 
 using CUDArt
-using CUDArt.rt.cudaStream_t
+
+const cudaStream_t = Ptr{Void}
 
 const BlasChar = Char #import Base.LinAlg.BlasChar
 import Base.one

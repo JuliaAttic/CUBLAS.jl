@@ -3,6 +3,8 @@ using CUBLAS
 using CUDArt
 using Base.Test
 
+@testset "CUBLAS" begin
+
 m = 20
 n = 35
 k = 13
@@ -14,6 +16,8 @@ end
 #################
 # level 1 tests #
 #################
+
+@testset "Level 1" begin
 
 @testset "blascopy!" begin
     @testset for elty in [Float32, Float64, Complex64, Complex128]
@@ -244,9 +248,13 @@ end
     end
 end
 
+end # level 1 testset
+
 #################
 # level 2 tests #
 #################
+
+@testset "Level 2" begin
 
 @testset "gemv!" begin
     @testset for elty in [Float32, Float64, Complex64, Complex128]
@@ -1711,3 +1719,6 @@ end
     end
 end
 
+end # level 2 testset
+
+end

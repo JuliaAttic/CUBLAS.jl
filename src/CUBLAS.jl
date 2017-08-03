@@ -11,7 +11,9 @@ module CUBLAS
 
 importall Base.LinAlg.BLAS
 
-using CUDArt
+using CUDAdrv: OwnedPtr, CuArray, CuVector, CuMatrix
+
+CuVecOrMat{T} = Union{CuVector{T},CuMatrix{T}}
 
 const cudaStream_t = Ptr{Void}
 

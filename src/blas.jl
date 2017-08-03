@@ -66,9 +66,9 @@ for (fname, elty) in ((:cublasDcopy_v2,:Float64),
     @eval begin
         # SUBROUTINE DCOPY(N,DX,INCX,DY,INCY)
         function blascopy!(n::Integer,
-                           DX::Union{CudaPtr{$elty},CudaArray{$elty}},
+                           DX::Union{OwnedPtr{$elty},CuArray{$elty}},
                            incx::Integer,
-                           DY::Union{CudaPtr{$elty},CudaArray{$elty}},
+                           DY::Union{OwnedPtr{$elty},CuArray{$elty}},
                            incy::Integer)
               statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                                 (cublasHandle_t, Cint, Ptr{$elty}, Cint,
@@ -88,7 +88,7 @@ for (fname, elty) in ((:cublasDscal_v2,:Float64),
         # SUBROUTINE DSCAL(N,DA,DX,INCX)
         function scal!(n::Integer,
                        DA::$elty,
-                       DX::Union{CudaPtr{$elty},CudaArray{$elty}},
+                       DX::Union{OwnedPtr{$elty},CuArray{$elty}},
                        incx::Integer)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Ptr{$elty},
@@ -99,7 +99,7 @@ for (fname, elty) in ((:cublasDscal_v2,:Float64),
     end
 end
 # TODO: uncomment and test the following method
-#scal{T}(n::Integer, DA::T, DX::CudaArray{T}, incx::Integer) = scal!(n, DA, copy(DX), incx)
+#scal{T}(n::Integer, DA::T, DX::CuArray{T}, incx::Integer) = scal!(n, DA, copy(DX), incx)
 # In case DX is complex, and DA is real, use dscal/sscal to save flops
 for (fname, elty, celty) in ((:cublasSscal_v2, :Float32, :Complex64),
                              (:cublasDscal_v2, :Float64, :Complex128))
@@ -107,7 +107,7 @@ for (fname, elty, celty) in ((:cublasSscal_v2, :Float32, :Complex64),
         # SUBROUTINE DSCAL(N,DA,DX,INCX)
         function scal!(n::Integer,
                        DA::$elty,
-                       DX::Union{CudaPtr{$celty},CudaArray{$celty}},
+                       DX::Union{OwnedPtr{$celty},CuArray{$celty}},
                        incx::Integer)
             #DY = reinterpret($elty,DX,(2*n,))
             #$(cublascall(fname))(cublashandle[1],2*n,[DA],DY,incx)
@@ -135,9 +135,9 @@ for (jname, fname, elty) in ((:dot,:cublasDdot_v2,:Float64),
                              (:dotu,:cublasCdotu_v2,:Complex64))
     @eval begin
         function $jname(n::Integer,
-                        DX::Union{CudaPtr{$elty},CudaArray{$elty}},
+                        DX::Union{OwnedPtr{$elty},CuArray{$elty}},
                         incx::Integer,
-                        DY::Union{CudaPtr{$elty},CudaArray{$elty}},
+                        DY::Union{OwnedPtr{$elty},CuArray{$elty}},
                         incy::Integer)
             result = Array{$elty}(1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -149,17 +149,17 @@ for (jname, fname, elty) in ((:dot,:cublasDdot_v2,:Float64),
     end
 end
 # TODO: inspect blas.jl in julia to correct types here (dot{c,u})
-function dot{T<:Union{Float32,Float64}}(DX::CudaArray{T}, DY::CudaArray{T})
+function dot{T<:Union{Float32,Float64}}(DX::CuArray{T}, DY::CuArray{T})
     n = length(DX)
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
     dot(n, DX, 1, DY, 1)
 end
-function dotc{T<:Union{Complex64,Complex128}}(DX::CudaArray{T}, DY::CudaArray{T})
+function dotc{T<:Union{Complex64,Complex128}}(DX::CuArray{T}, DY::CuArray{T})
     n = length(DX)
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
     dotc(n, DX, 1, DY, 1)
 end
-function dotu{T<:Union{Complex64,Complex128}}(DX::CudaArray{T}, DY::CudaArray{T})
+function dotu{T<:Union{Complex64,Complex128}}(DX::CuArray{T}, DY::CuArray{T})
     n = length(DX)
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
     dotu(n, DX, 1, DY, 1)
@@ -173,7 +173,7 @@ for (fname, elty, ret_type) in ((:cublasDnrm2_v2,:Float64,:Float64),
     @eval begin
         # SUBROUTINE DNRM2(N,X,INCX)
         function nrm2(n::Integer,
-                      X::Union{CudaPtr{$elty},CudaArray{$elty}},
+                      X::Union{OwnedPtr{$elty},CuArray{$elty}},
                       incx::Integer)
             result = Array{$ret_type}(1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -184,9 +184,9 @@ for (fname, elty, ret_type) in ((:cublasDnrm2_v2,:Float64,:Float64),
         end
     end
 end
-# TODO: consider CudaVector and CudaStridedVector
+# TODO: consider CuVector and CudaStridedVector
 #nrm2(x::StridedVector) = nrm2(length(x), x, stride(x,1))
-nrm2(x::CudaArray) = nrm2(length(x), x, 1)
+nrm2(x::CuArray) = nrm2(length(x), x, 1)
 
 ## asum
 for (fname, elty, ret_type) in ((:cublasDasum_v2,:Float64,:Float64),
@@ -196,7 +196,7 @@ for (fname, elty, ret_type) in ((:cublasDasum_v2,:Float64,:Float64),
     @eval begin
         # SUBROUTINE ASUM(N, X, INCX)
         function asum(n::Integer,
-                      X::Union{CudaPtr{$elty},CudaArray{$elty}},
+                      X::Union{OwnedPtr{$elty},CuArray{$elty}},
                       incx::Integer)
             result = Array{$ret_type}(1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -208,7 +208,7 @@ for (fname, elty, ret_type) in ((:cublasDasum_v2,:Float64,:Float64),
     end
 end
 #asum(x::StridedVector) = asum(length(x), x, stride(x,1))
-asum(x::CudaArray) = asum(length(x), pointer(x), 1)
+asum(x::CuArray) = asum(length(x), pointer(x), 1)
 
 ## axpy
 for (fname, elty) in ((:cublasDaxpy_v2,:Float64),
@@ -228,9 +228,9 @@ for (fname, elty) in ((:cublasDaxpy_v2,:Float64),
         #   int incy);
         function axpy!(n::Integer,
                        alpha::($elty),
-                       dx::Union{CudaPtr{$elty},CudaArray{$elty}},
+                       dx::Union{OwnedPtr{$elty},CuArray{$elty}},
                        incx::Integer,
-                       dy::Union{CudaPtr{$elty},CudaArray{$elty}},
+                       dy::Union{OwnedPtr{$elty},CuArray{$elty}},
                        incy::Integer)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{$elty}, Ptr{$elty},
@@ -243,16 +243,16 @@ for (fname, elty) in ((:cublasDaxpy_v2,:Float64),
 end
 
 function axpy!{T<:CublasFloat,Ta<:Number}(alpha::Ta,
-                                          x::CudaArray{T},
-                                          y::CudaArray{T})
+                                          x::CuArray{T},
+                                          y::CuArray{T})
     length(x)==length(y) || throw(DimensionMismatch(""))
     axpy!(length(x), convert(T,alpha), x, 1, y, 1)
 end
 
 function axpy!{T<:CublasFloat,Ta<:Number,Ti<:Integer}(alpha::Ta,
-                                                      x::CudaArray{T},
+                                                      x::CuArray{T},
                                                       rx::Union{UnitRange{Ti},Range{Ti}},
-                                                      y::CudaArray{T},
+                                                      y::CuArray{T},
                                                       ry::Union{UnitRange{Ti},Range{Ti}})
     length(rx)==length(ry) || throw(DimensionMismatch(""))
     if minimum(rx) < 1 || maximum(rx) > length(x) || minimum(ry) < 1 || maximum(ry) > length(y)
@@ -271,7 +271,7 @@ for (fname, elty) in ((:cublasIdamax_v2,:Float64),
                       (:cublasIcamax_v2,:Complex64))
     @eval begin
         function iamax(n::Integer,
-                       dx::Union{CudaPtr{$elty}, CudaArray{$elty}},
+                       dx::Union{OwnedPtr{$elty}, CuArray{$elty}},
                        incx::Integer)
             result = Array{Cint}(1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -282,7 +282,7 @@ for (fname, elty) in ((:cublasIdamax_v2,:Float64),
         end
     end
 end
-iamax(dx::CudaArray) = iamax(length(dx), dx, 1)
+iamax(dx::CuArray) = iamax(length(dx), dx, 1)
 
 ## iamin
 # iamin is not in standard blas is a CUBLAS extension
@@ -292,7 +292,7 @@ for (fname, elty) in ((:cublasIdamin_v2,:Float64),
                       (:cublasIcamin_v2,:Complex64))
     @eval begin
         function iamin(n::Integer,
-                       dx::Union{CudaPtr{$elty}, CudaArray{$elty}},
+                       dx::Union{OwnedPtr{$elty}, CuArray{$elty}},
                        incx::Integer)
             result = Array{Cint}(1)
             statuscheck(ccall(($(string(fname)), libcublas), cublasStatus_t,
@@ -303,7 +303,7 @@ for (fname, elty) in ((:cublasIdamin_v2,:Float64),
         end
     end
 end
-iamin(dx::CudaArray) = iamin(length(dx), dx, 1)
+iamin(dx::CuArray) = iamin(length(dx), dx, 1)
 
 # Level 2
 ## mv
@@ -323,10 +323,10 @@ for (fname, elty) in ((:cublasDgemv_v2,:Float64),
         #   double *y, int incy)
         function gemv!(trans::BlasChar,
                        alpha::($elty),
-                       A::CudaMatrix{$elty},
-                       X::CudaVector{$elty},
+                       A::CuMatrix{$elty},
+                       X::CuVector{$elty},
                        beta::($elty),
-                       Y::CudaVector{$elty})
+                       Y::CuVector{$elty})
             # handle trans
             cutrans = cublasop(trans)
             m,n = size(A)
@@ -344,10 +344,10 @@ for (fname, elty) in ((:cublasDgemv_v2,:Float64),
                               incy))
             Y
         end
-        function gemv(trans::BlasChar, alpha::($elty), A::CudaMatrix{$elty}, X::CudaVector{$elty})
+        function gemv(trans::BlasChar, alpha::($elty), A::CuMatrix{$elty}, X::CuVector{$elty})
             gemv!(trans, alpha, A, X, zero($elty), similar(X, $elty, size(A, (trans == 'N' ? 1 : 2))))
         end
-        function gemv(trans::BlasChar, A::CudaMatrix{$elty}, X::CudaVector{$elty})
+        function gemv(trans::BlasChar, A::CuMatrix{$elty}, X::CuVector{$elty})
             gemv!(trans, one($elty), A, X, zero($elty), similar(X, $elty, size(A, (trans == 'N' ? 1 : 2))))
         end
     end
@@ -370,10 +370,10 @@ for (fname, elty) in ((:cublasDgbmv_v2,:Float64),
                        kl::Integer,
                        ku::Integer,
                        alpha::($elty),
-                       A::CudaMatrix{$elty},
-                       x::CudaVector{$elty},
+                       A::CuMatrix{$elty},
+                       x::CuVector{$elty},
                        beta::($elty),
-                       y::CudaVector{$elty})
+                       y::CuVector{$elty})
             # handle trans
             cutrans = cublasop(trans)
             n = size(A,2)
@@ -396,8 +396,8 @@ for (fname, elty) in ((:cublasDgbmv_v2,:Float64),
                       kl::Integer,
                       ku::Integer,
                       alpha::($elty),
-                      A::CudaMatrix{$elty},
-                      x::CudaVector{$elty})
+                      A::CuMatrix{$elty},
+                      x::CuVector{$elty})
             # TODO: fix gbmv bug in julia
             n = size(A,2)
             leny = trans == 'N' ? m : n
@@ -407,8 +407,8 @@ for (fname, elty) in ((:cublasDgbmv_v2,:Float64),
                       m::Integer,
                       kl::Integer,
                       ku::Integer,
-                      A::CudaMatrix{$elty},
-                      x::CudaVector{$elty})
+                      A::CuMatrix{$elty},
+                      x::CuVector{$elty})
             gbmv(trans, m, kl, ku, one($elty), A, x)
         end
     end
@@ -428,10 +428,10 @@ for (fname, elty) in ((:cublasDsymv_v2,:Float64),
         #   const double *beta, double *y, int incy)
         function symv!(uplo::BlasChar,
                        alpha::($elty),
-                       A::CudaMatrix{$elty},
-                       x::CudaVector{$elty},
+                       A::CuMatrix{$elty},
+                       x::CuVector{$elty},
                        beta::($elty),
-                       y::CudaVector{$elty})
+                       y::CuVector{$elty})
             cuuplo = cublasfill(uplo)
             m, n = size(A)
             if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
@@ -448,10 +448,10 @@ for (fname, elty) in ((:cublasDsymv_v2,:Float64),
                               A, lda, x, incx, [beta], y, incy))
             y
         end
-        function symv(uplo::BlasChar, alpha::($elty), A::CudaMatrix{$elty}, x::CudaVector{$elty})
+        function symv(uplo::BlasChar, alpha::($elty), A::CuMatrix{$elty}, x::CuVector{$elty})
                 symv!(uplo, alpha, A, x, zero($elty), similar(x))
         end
-        function symv(uplo::BlasChar, A::CudaMatrix{$elty}, x::CudaVector{$elty})
+        function symv(uplo::BlasChar, A::CuMatrix{$elty}, x::CuVector{$elty})
             symv(uplo, one($elty), A, x)
         end
     end
@@ -469,10 +469,10 @@ for (fname, elty) in ((:cublasZhemv_v2,:Complex128),
         #   const cuComplex *beta, cuComplex *y, int incy)
         function hemv!(uplo::BlasChar,
                        alpha::$elty,
-                       A::CudaMatrix{$elty},
-                       x::CudaVector{$elty},
+                       A::CuMatrix{$elty},
+                       x::CuVector{$elty},
                        beta::$elty,
-                       y::CudaVector{$elty})
+                       y::CuVector{$elty})
             # TODO: fix dimension check bug in julia
             cuuplo = cublasfill(uplo)
             m, n = size(A)
@@ -490,12 +490,12 @@ for (fname, elty) in ((:cublasZhemv_v2,:Complex128),
                               A, lda, x, incx, [beta], y, incy))
             y
         end
-        function hemv(uplo::BlasChar, alpha::($elty), A::CudaMatrix{$elty},
-                      x::CudaVector{$elty})
+        function hemv(uplo::BlasChar, alpha::($elty), A::CuMatrix{$elty},
+                      x::CuVector{$elty})
             hemv!(uplo, alpha, A, x, zero($elty), similar(x))
         end
-        function hemv(uplo::BlasChar, A::CudaMatrix{$elty},
-                      x::CudaVector{$elty})
+        function hemv(uplo::BlasChar, A::CuMatrix{$elty},
+                      x::CuVector{$elty})
             hemv(uplo, one($elty), A, x)
         end
     end
@@ -515,10 +515,10 @@ for (fname, elty) in ((:cublasDsbmv_v2,:Float64),
         function sbmv!(uplo::BlasChar,
                        k::Integer,
                        alpha::($elty),
-                       A::CudaMatrix{$elty},
-                       x::CudaVector{$elty},
+                       A::CuMatrix{$elty},
+                       x::CuVector{$elty},
                        beta::($elty),
-                       y::CudaVector{$elty})
+                       y::CuVector{$elty})
             cuuplo = cublasfill(uplo)
             m, n = size(A)
             #if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
@@ -537,12 +537,12 @@ for (fname, elty) in ((:cublasDsbmv_v2,:Float64),
             y
         end
         function sbmv(uplo::BlasChar, k::Integer, alpha::($elty),
-                      A::CudaMatrix{$elty}, x::CudaVector{$elty})
+                      A::CuMatrix{$elty}, x::CuVector{$elty})
             n = size(A,2)
             sbmv!(uplo, k, alpha, A, x, zero($elty), similar(x, $elty, n))
         end
-        function sbmv(uplo::BlasChar, k::Integer, A::CudaMatrix{$elty},
-                      x::CudaVector{$elty})
+        function sbmv(uplo::BlasChar, k::Integer, A::CuMatrix{$elty},
+                      x::CuVector{$elty})
             sbmv(uplo, k, one($elty), A, x)
         end
     end
@@ -560,10 +560,10 @@ for (fname, elty) in ((:cublasZhbmv_v2,:Complex128),
         function hbmv!(uplo::BlasChar,
                        k::Integer,
                        alpha::($elty),
-                       A::CudaMatrix{$elty},
-                       x::CudaVector{$elty},
+                       A::CuMatrix{$elty},
+                       x::CuVector{$elty},
                        beta::($elty),
-                       y::CudaVector{$elty})
+                       y::CuVector{$elty})
             cuuplo = cublasfill(uplo)
             m, n = size(A)
             if !(1<=(1+k)<=n) throw(DimensionMismatch("Incorrect number of bands")) end
@@ -581,12 +581,12 @@ for (fname, elty) in ((:cublasZhbmv_v2,:Complex128),
             y
         end
         function hbmv(uplo::BlasChar, k::Integer, alpha::($elty),
-                      A::CudaMatrix{$elty}, x::CudaVector{$elty})
+                      A::CuMatrix{$elty}, x::CuVector{$elty})
             n = size(A,2)
             hbmv!(uplo, k, alpha, A, x, zero($elty), similar(x, $elty, n))
         end
-        function hbmv(uplo::BlasChar, k::Integer, A::CudaMatrix{$elty},
-                      x::CudaVector{$elty})
+        function hbmv(uplo::BlasChar, k::Integer, A::CuMatrix{$elty},
+                      x::CuVector{$elty})
             hbmv(uplo, k, one($elty), A, x)
         end
     end
@@ -607,8 +607,8 @@ for (fname, elty) in ((:cublasStbmv_v2,:Float32),
                        trans::BlasChar,
                        diag::BlasChar,
                        k::Integer,
-                       A::CudaMatrix{$elty},
-                       x::CudaVector{$elty})
+                       A::CuMatrix{$elty},
+                       x::CuVector{$elty})
             cuuplo  = cublasfill(uplo)
             cutrans = cublasop(trans)
             cudiag  = cublasdiag(diag)
@@ -628,8 +628,8 @@ for (fname, elty) in ((:cublasStbmv_v2,:Float32),
         function tbmv(uplo::BlasChar,
                       trans::BlasChar,
                       diag::BlasChar,
-                      A::CudaMatrix{$elty},
-                      x::CudaVector{$elty})
+                      A::CuMatrix{$elty},
+                      x::CuVector{$elty})
             tbmv!(uplo, trans, diag, A, copy(x))
         end
     end
@@ -650,8 +650,8 @@ for (fname, elty) in ((:cublasStbsv_v2,:Float32),
                        trans::BlasChar,
                        diag::BlasChar,
                        k::Integer,
-                       A::CudaMatrix{$elty},
-                       x::CudaVector{$elty})
+                       A::CuMatrix{$elty},
+                       x::CuVector{$elty})
             cuuplo  = cublasfill(uplo)
             cutrans = cublasop(trans)
             cudiag  = cublasdiag(diag)
@@ -672,8 +672,8 @@ for (fname, elty) in ((:cublasStbsv_v2,:Float32),
                       trans::BlasChar,
                       diag::BlasChar,
                       k::Integer,
-                      A::CudaMatrix{$elty},
-                      x::CudaVector{$elty})
+                      A::CuMatrix{$elty},
+                      x::CuVector{$elty})
             tbsv!(uplo, trans, diag, k, A, copy(x))
         end
     end
@@ -693,8 +693,8 @@ for (fname, elty) in ((:cublasDtrmv_v2,:Float64),
         function trmv!(uplo::BlasChar,
                        trans::BlasChar,
                        diag::BlasChar,
-                       A::CudaMatrix{$elty},
-                       x::CudaVector{$elty})
+                       A::CuMatrix{$elty},
+                       x::CuVector{$elty})
             m, n = size(A)
             if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
             if n != length(x)
@@ -715,8 +715,8 @@ for (fname, elty) in ((:cublasDtrmv_v2,:Float64),
         function trmv(uplo::BlasChar,
                       trans::BlasChar,
                       diag::BlasChar,
-                      A::CudaMatrix{$elty},
-                      x::CudaVector{$elty})
+                      A::CuMatrix{$elty},
+                      x::CuVector{$elty})
             trmv!(uplo, trans, diag, A, copy(x))
         end
     end
@@ -736,8 +736,8 @@ for (fname, elty) in ((:cublasDtrsv_v2,:Float64),
         function trsv!(uplo::BlasChar,
                        trans::BlasChar,
                        diag::BlasChar,
-                       A::CudaMatrix{$elty},
-                       x::CudaVector{$elty})
+                       A::CuMatrix{$elty},
+                       x::CuVector{$elty})
             m, n = size(A)
             if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
             if n != length(x)
@@ -758,8 +758,8 @@ for (fname, elty) in ((:cublasDtrsv_v2,:Float64),
         function trsv(uplo::BlasChar,
                       trans::BlasChar,
                       diag::BlasChar,
-                      A::CudaMatrix{$elty},
-                      x::CudaVector{$elty})
+                      A::CuMatrix{$elty},
+                      x::CuVector{$elty})
             trsv!(uplo, trans, diag, A, copy(x))
         end
     end
@@ -777,9 +777,9 @@ for (fname, elty) in ((:cublasDger_v2,:Float64),
         #   const double *y, int incy,
         #   double *A, int lda)
         function ger!(alpha::$elty,
-                      x::CudaVector{$elty},
-                      y::CudaVector{$elty},
-                      A::CudaMatrix{$elty})
+                      x::CuVector{$elty},
+                      y::CuVector{$elty},
+                      A::CuMatrix{$elty})
             m, n = size(A)
             m == length(x) || throw(DimensionMismatch(""))
             n == length(y) || throw(DimensionMismatch(""))
@@ -809,8 +809,8 @@ for (fname, elty) in ((:cublasDsyr_v2,:Float64),
         #   double *A, int lda)
         function syr!(uplo::BlasChar,
                       alpha::$elty,
-                      x::CudaVector{$elty},
-                      A::CudaMatrix{$elty})
+                      x::CuVector{$elty},
+                      A::CuMatrix{$elty})
             cuuplo = cublasfill(uplo)
             m, n = size(A)
             m == n || throw(DimensionMismatch("Matrix A is $m by $n but must be square"))
@@ -833,8 +833,8 @@ for (fname, elty) in ((:cublasZher_v2,:Complex128),
     @eval begin
         function her!(uplo::BlasChar,
                       alpha::$elty,
-                      x::CudaVector{$elty},
-                      A::CudaMatrix{$elty})
+                      x::CuVector{$elty},
+                      A::CuMatrix{$elty})
             cuuplo = cublasfill(uplo)
             m, n = size(A)
             m == n || throw(DimensionMismatch("Matrix A is $m by $n but must be square"))
@@ -857,9 +857,9 @@ for (fname, elty) in ((:cublasZher2_v2,:Complex128),
     @eval begin
         function her2!(uplo::BlasChar,
                       alpha::$elty,
-                      x::CudaVector{$elty},
-                      y::CudaVector{$elty},
-                      A::CudaMatrix{$elty})
+                      x::CuVector{$elty},
+                      y::CuVector{$elty},
+                      A::CuMatrix{$elty})
             cuuplo = cublasfill(uplo)
             m, n = size(A)
             m == n || throw(DimensionMismatch("Matrix A is $m by $n but must be square"))
@@ -897,10 +897,10 @@ for (fname, elty) in
         function gemm!(transA::BlasChar,
                        transB::BlasChar,
                        alpha::($elty),
-                       A::CudaVecOrMat{$elty},
-                       B::CudaVecOrMat{$elty},
+                       A::CuVecOrMat{$elty},
+                       B::CuVecOrMat{$elty},
                        beta::($elty),
-                       C::CudaVecOrMat{$elty})
+                       C::CuVecOrMat{$elty})
             m = size(A, transA == 'N' ? 1 : 2)
             k = size(A, transA == 'N' ? 2 : 1)
             n = size(B, transB == 'N' ? 2 : 1)
@@ -924,16 +924,16 @@ for (fname, elty) in
         function gemm(transA::BlasChar,
                       transB::BlasChar,
                       alpha::($elty),
-                      A::CudaMatrix{$elty},
-                      B::CudaMatrix{$elty})
+                      A::CuMatrix{$elty},
+                      B::CuMatrix{$elty})
             gemm!(transA, transB, alpha, A, B, zero($elty),
                   similar(B, $elty, (size(A, transA == 'N' ? 1 : 2),
                                      size(B, transB == 'N' ? 2 : 1))))
         end
         function gemm(transA::BlasChar,
                       transB::BlasChar,
-                      A::CudaMatrix{$elty},
-                      B::CudaMatrix{$elty})
+                      A::CuMatrix{$elty},
+                      B::CuMatrix{$elty})
             gemm(transA, transB, one($elty), A, B)
         end
     end
@@ -955,10 +955,10 @@ for (fname, elty) in
         function gemm_batched!(transA::BlasChar,
                                transB::BlasChar,
                                alpha::($elty),
-                               A::Array{CudaMatrix{$elty},1},
-                               B::Array{CudaMatrix{$elty},1},
+                               A::Array{CuMatrix{$elty},1},
+                               B::Array{CuMatrix{$elty},1},
                                beta::($elty),
-                               C::Array{CudaMatrix{$elty},1})
+                               C::Array{CuMatrix{$elty},1})
             if( length(A) != length(B) || length(A) != length(C) )
                 throw(DimensionMismatch(""))
             end
@@ -978,9 +978,9 @@ for (fname, elty) in
             lda = max(1,stride(A[1],2))
             ldb = max(1,stride(B[1],2))
             ldc = max(1,stride(C[1],2))
-            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
-            Bptrs = CudaArray(map( (x) -> pointer(x).ptr, B ))
-            Cptrs = CudaArray(map( (x) -> pointer(x).ptr, C ))
+            Aptrs = CuArray(map( (x) -> pointer(x).ptr, A ))
+            Bptrs = CuArray(map( (x) -> pointer(x).ptr, B ))
+            Cptrs = CuArray(map( (x) -> pointer(x).ptr, C ))
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
                               (cublasHandle_t, cublasOperation_t,
                               cublasOperation_t, Cint, Cint, Cint, Ptr{$elty},
@@ -993,15 +993,15 @@ for (fname, elty) in
         function gemm_batched(transA::BlasChar,
                       transB::BlasChar,
                       alpha::($elty),
-                      A::Array{CudaMatrix{$elty},1},
-                      B::Array{CudaMatrix{$elty},1})
-            C = CudaMatrix{$elty}[similar( B[1], $elty, (size(A[1], transA == 'N' ? 1 : 2),size(B[1], transB == 'N' ? 2 : 1))) for i in 1:length(A)]
+                      A::Array{CuMatrix{$elty},1},
+                      B::Array{CuMatrix{$elty},1})
+            C = CuMatrix{$elty}[similar( B[1], $elty, (size(A[1], transA == 'N' ? 1 : 2),size(B[1], transB == 'N' ? 2 : 1))) for i in 1:length(A)]
             gemm_batched!(transA, transB, alpha, A, B, zero($elty), C )
         end
         function gemm_batched(transA::BlasChar,
                       transB::BlasChar,
-                      A::Array{CudaMatrix{$elty},1},
-                      B::Array{CudaMatrix{$elty},1})
+                      A::Array{CuMatrix{$elty},1},
+                      B::Array{CuMatrix{$elty},1})
             gemm_batched(transA, transB, one($elty), A, B)
         end
     end
@@ -1023,10 +1023,10 @@ for (fname, elty) in ((:cublasDsymm_v2,:Float64),
         function symm!(side::BlasChar,
                        uplo::BlasChar,
                        alpha::($elty),
-                       A::CudaMatrix{$elty},
-                       B::CudaMatrix{$elty},
+                       A::CuMatrix{$elty},
+                       B::CuMatrix{$elty},
                        beta::($elty),
-                       C::CudaMatrix{$elty})
+                       C::CuMatrix{$elty})
             cuside = cublasside(side)
             cuuplo = cublasfill(uplo)
             k, nA = size(A)
@@ -1051,14 +1051,14 @@ for (fname, elty) in ((:cublasDsymm_v2,:Float64),
         function symm(side::BlasChar,
                       uplo::BlasChar,
                       alpha::($elty),
-                      A::CudaMatrix{$elty},
-                      B::CudaMatrix{$elty})
+                      A::CuMatrix{$elty},
+                      B::CuMatrix{$elty})
             symm!(side, uplo, alpha, A, B, zero($elty), similar(B))
         end
         function symm(side::BlasChar,
                       uplo::BlasChar,
-                      A::CudaMatrix{$elty},
-                      B::CudaMatrix{$elty})
+                      A::CuMatrix{$elty},
+                      B::CuMatrix{$elty})
             symm(side, uplo, one($elty), A, B)
         end
     end
@@ -1078,9 +1078,9 @@ for (fname, elty) in ((:cublasDsyrk_v2,:Float64),
        function syrk!(uplo::BlasChar,
                       trans::BlasChar,
                       alpha::($elty),
-                      A::CudaVecOrMat{$elty},
+                      A::CuVecOrMat{$elty},
                       beta::($elty),
-                      C::CudaMatrix{$elty})
+                      C::CuMatrix{$elty})
            cuuplo = cublasfill(uplo)
            cutrans = cublasop(trans)
            mC, n = size(C)
@@ -1103,12 +1103,12 @@ end
 function syrk(uplo::BlasChar,
               trans::BlasChar,
               alpha::Number,
-              A::CudaVecOrMat)
+              A::CuVecOrMat)
     T = eltype(A)
     n = size(A, trans == 'N' ? 1 : 2)
     syrk!(uplo, trans, convert(T,alpha), A, zero(T), similar(A, T, (n, n)))
 end
-syrk(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat) = syrk(uplo, trans,
+syrk(uplo::BlasChar, trans::BlasChar, A::CuVecOrMat) = syrk(uplo, trans,
                                                               one(eltype(A)),
                                                               A)
 
@@ -1127,10 +1127,10 @@ for (fname, elty) in ((:cublasZhemm_v2,:Complex128),
        function hemm!(side::BlasChar,
                       uplo::BlasChar,
                       alpha::($elty),
-                      A::CudaMatrix{$elty},
-                      B::CudaMatrix{$elty},
+                      A::CuMatrix{$elty},
+                      B::CuMatrix{$elty},
                       beta::($elty),
-                      C::CudaMatrix{$elty})
+                      C::CuMatrix{$elty})
            cuside = cublasside(side)
            cuuplo = cublasfill(uplo)
            mA, nA = size(A)
@@ -1153,12 +1153,12 @@ for (fname, elty) in ((:cublasZhemm_v2,:Complex128),
        function hemm(uplo::BlasChar,
                      trans::BlasChar,
                      alpha::($elty),
-                     A::CudaMatrix{$elty},
-                     B::CudaMatrix{$elty})
+                     A::CuMatrix{$elty},
+                     B::CuMatrix{$elty})
            m,n = size(B)
            hemm!( uplo, trans, alpha, A, B, zero($elty), similar(B, $elty, (m,n) ) )
        end
-       hemm( uplo::BlasChar, trans::BlasChar, A::CudaMatrix{$elty}, B::CudaMatrix{$elty}) = hemm( uplo, trans, one($elty), A, B)
+       hemm( uplo::BlasChar, trans::BlasChar, A::CuMatrix{$elty}, B::CuMatrix{$elty}) = hemm( uplo, trans, one($elty), A, B)
     end
 end
 
@@ -1174,9 +1174,9 @@ for (fname, elty) in ((:cublasZherk_v2,:Complex128),
        function herk!(uplo::BlasChar,
                       trans::BlasChar,
                       alpha::($elty),
-                      A::CudaVecOrMat{$elty},
+                      A::CuVecOrMat{$elty},
                       beta::($elty),
-                      C::CudaMatrix{$elty})
+                      C::CuMatrix{$elty})
            cuuplo = cublasfill(uplo)
            cutrans = cublasop(trans)
            mC, n = size(C)
@@ -1194,11 +1194,11 @@ for (fname, elty) in ((:cublasZherk_v2,:Complex128),
                              lda, [beta], C, ldc))
            C
        end
-       function herk(uplo::BlasChar, trans::BlasChar, alpha::($elty), A::CudaVecOrMat{$elty})
+       function herk(uplo::BlasChar, trans::BlasChar, alpha::($elty), A::CuVecOrMat{$elty})
            n = size(A, trans == 'N' ? 1 : 2)
            herk!(uplo, trans, alpha, A, zero($elty), similar(A, $elty, (n,n)))
        end
-       herk(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat{$elty}) = herk(uplo, trans, one($elty), A)
+       herk(uplo::BlasChar, trans::BlasChar, A::CuVecOrMat{$elty}) = herk(uplo, trans, one($elty), A)
    end
 end
 
@@ -1220,10 +1220,10 @@ for (fname, elty) in ((:cublasDsyr2k_v2,:Float64),
         function syr2k!(uplo::BlasChar,
                         trans::BlasChar,
                         alpha::($elty),
-                        A::CudaVecOrMat{$elty},
-                        B::CudaVecOrMat{$elty},
+                        A::CuVecOrMat{$elty},
+                        B::CuVecOrMat{$elty},
                         beta::($elty),
-                        C::CudaMatrix{$elty})
+                        C::CuMatrix{$elty})
             # TODO: check size of B in julia (syr2k!)
             cuuplo = cublasfill(uplo)
             cutrans = cublasop(trans)
@@ -1253,13 +1253,13 @@ end
 function syr2k(uplo::BlasChar,
                trans::BlasChar,
                alpha::Number,
-               A::CudaVecOrMat,
-               B::CudaVecOrMat)
+               A::CuVecOrMat,
+               B::CuVecOrMat)
     T = eltype(A)
     n = size(A, trans == 'N' ? 1 : 2)
     syr2k!(uplo, trans, convert(T,alpha), A, B, zero(T), similar(A, T, (n, n)))
 end
-syr2k(uplo::BlasChar, trans::BlasChar, A::CudaVecOrMat, B::CudaVecOrMat) = syr2k(uplo, trans, one(eltype(A)), A, B)
+syr2k(uplo::BlasChar, trans::BlasChar, A::CuVecOrMat, B::CuVecOrMat) = syr2k(uplo, trans, one(eltype(A)), A, B)
 
 ## her2k
 for (fname, elty1, elty2) in ((:cublasZher2k_v2,:Complex128,:Float64),
@@ -1274,10 +1274,10 @@ for (fname, elty1, elty2) in ((:cublasZher2k_v2,:Complex128,:Float64),
        function her2k!(uplo::BlasChar,
                        trans::BlasChar,
                        alpha::($elty1),
-                       A::CudaVecOrMat{$elty1},
-                       B::CudaVecOrMat{$elty1},
+                       A::CuVecOrMat{$elty1},
+                       B::CuVecOrMat{$elty1},
                        beta::($elty2),
-                       C::CudaMatrix{$elty1})
+                       C::CuMatrix{$elty1})
            # TODO: check size of B in julia (her2k!)
            cuuplo = cublasfill(uplo)
            cutrans = cublasop(trans)
@@ -1305,15 +1305,15 @@ for (fname, elty1, elty2) in ((:cublasZher2k_v2,:Complex128,:Float64),
        function her2k(uplo::BlasChar,
                       trans::BlasChar,
                       alpha::($elty1),
-                      A::CudaVecOrMat{$elty1},
-                      B::CudaVecOrMat{$elty1})
+                      A::CuVecOrMat{$elty1},
+                      B::CuVecOrMat{$elty1})
            n = size(A, trans == 'N' ? 1 : 2)
            her2k!(uplo, trans, alpha, A, B, zero($elty2), similar(A, $elty1, (n,n)))
        end
        her2k(uplo::BlasChar,
              trans::BlasChar,
-             A::CudaVecOrMat{$elty1},
-             B::CudaVecOrMat{$elty1}) = her2k(uplo, trans, one($elty1), A, B)
+             A::CuVecOrMat{$elty1},
+             B::CuVecOrMat{$elty1}) = her2k(uplo, trans, one($elty1), A, B)
    end
 end
 
@@ -1339,9 +1339,9 @@ for (mmname, smname, elty) in
                        transa::BlasChar,
                        diag::BlasChar,
                        alpha::($elty),
-                       A::CudaMatrix{$elty},
-                       B::CudaMatrix{$elty},
-                       C::CudaMatrix{$elty})
+                       A::CuMatrix{$elty},
+                       B::CuMatrix{$elty},
+                       C::CuMatrix{$elty})
             cuside = cublasside(side)
             cuuplo = cublasfill(uplo)
             cutransa = cublasop(transa)
@@ -1370,8 +1370,8 @@ for (mmname, smname, elty) in
                       transa::BlasChar,
                       diag::BlasChar,
                       alpha::($elty),
-                      A::CudaMatrix{$elty},
-                      B::CudaMatrix{$elty})
+                      A::CuMatrix{$elty},
+                      B::CuMatrix{$elty})
             trmm!(side, uplo, transa, diag, alpha, A, B, similar(B))
         end
         # cublasStatus_t cublasDtrsm(cublasHandle_t handle,
@@ -1386,8 +1386,8 @@ for (mmname, smname, elty) in
                        transa::BlasChar,
                        diag::BlasChar,
                        alpha::($elty),
-                       A::CudaMatrix{$elty},
-                       B::CudaMatrix{$elty})
+                       A::CuMatrix{$elty},
+                       B::CuMatrix{$elty})
             cuside = cublasside(side)
             cuuplo = cublasfill(uplo)
             cutransa = cublasop(transa)
@@ -1413,8 +1413,8 @@ for (mmname, smname, elty) in
                       transa::BlasChar,
                       diag::BlasChar,
                       alpha::($elty),
-                      A::CudaMatrix{$elty},
-                      B::CudaMatrix{$elty})
+                      A::CuMatrix{$elty},
+                      B::CuMatrix{$elty})
             trsm!(side, uplo, transa, diag, alpha, A, copy(B))
         end
     end
@@ -1440,8 +1440,8 @@ for (fname, elty) in
                                transa::BlasChar,
                                diag::BlasChar,
                                alpha::($elty),
-                               A::Array{CudaMatrix{$elty},1},
-                               B::Array{CudaMatrix{$elty},1})
+                               A::Array{CuMatrix{$elty},1},
+                               B::Array{CuMatrix{$elty},1})
             cuside = cublasside(side)
             cuuplo = cublasfill(uplo)
             cutransa = cublasop(transa)
@@ -1458,8 +1458,8 @@ for (fname, elty) in
             m,n = size(B[1])
             lda = max(1,stride(A[1],2))
             ldb = max(1,stride(B[1],2))
-            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
-            Bptrs = CudaArray(map( (x) -> pointer(x).ptr, B ))
+            Aptrs = CuArray(map( (x) -> pointer(x).ptr, A ))
+            Bptrs = CuArray(map( (x) -> pointer(x).ptr, B ))
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
                               (cublasHandle_t, cublasSideMode_t, cublasFillMode_t,
                               cublasOperation_t, cublasDiagType_t, Cint, Cint,
@@ -1474,8 +1474,8 @@ for (fname, elty) in
                               transa::BlasChar,
                               diag::BlasChar,
                               alpha::($elty),
-                              A::Array{CudaMatrix{$elty},1},
-                              B::Array{CudaMatrix{$elty},1})
+                              A::Array{CuMatrix{$elty},1},
+                              B::Array{CuMatrix{$elty},1})
             trsm_batched!(side, uplo, transa, diag, alpha, A, copy(B) )
         end
     end
@@ -1502,10 +1502,10 @@ for (fname, elty) in ((:cublasDgeam,:Float64),
        function geam!(transa::BlasChar,
                       transb::BlasChar,
                       alpha::($elty),
-                      A::CudaMatrix{$elty},
+                      A::CuMatrix{$elty},
                       beta::($elty),
-                      B::CudaMatrix{$elty},
-                      C::CudaMatrix{$elty})
+                      B::CuMatrix{$elty},
+                      C::CuMatrix{$elty})
            cutransa = cublasop(transa)
            cutransb = cublasop(transb)
            mA, nA = size(A)
@@ -1528,9 +1528,9 @@ for (fname, elty) in ((:cublasDgeam,:Float64),
        function geam(transa::BlasChar,
                      transb::BlasChar,
                      alpha::($elty),
-                     A::CudaMatrix{$elty},
+                     A::CuMatrix{$elty},
                      beta::($elty),
-                     B::CudaMatrix{$elty})
+                     B::CuMatrix{$elty})
            m,n = size(B)
            if ((transb == 'T' || transb == 'C'))
                geam!( transa, transb, alpha, A, beta, B, similar(B, $elty, (n,m) ) )
@@ -1539,7 +1539,7 @@ for (fname, elty) in ((:cublasDgeam,:Float64),
                geam!( transa, transb, alpha, A, beta, B, similar(B, $elty, (m,n) ) )
            end
        end
-       geam( uplo::BlasChar, trans::BlasChar, A::CudaMatrix{$elty}, B::CudaMatrix{$elty}) = geam( uplo, trans, one($elty), A, one($elty), B)
+       geam( uplo::BlasChar, trans::BlasChar, A::CuMatrix{$elty}, B::CuMatrix{$elty}) = geam( uplo, trans, one($elty), A, one($elty), B)
     end
 end
 
@@ -1555,7 +1555,7 @@ for (fname, elty) in
         #   cublasHandle_t handle, int n, double **A,
         #   int lda, int *PivotArray, int *infoArray,
         #   int batchSize)
-        function getrf_batched!(A::Array{CudaMatrix{$elty},1},
+        function getrf_batched!(A::Array{CuMatrix{$elty},1},
                                Pivot::Bool)
             for As in A
                 m,n = size(As)
@@ -1565,19 +1565,19 @@ for (fname, elty) in
             end
             m,n = size(A[1])
             lda = max(1,stride(A[1],2))
-            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
-            info  = CudaArray(Cint, (length(A)))
-            pivotArray  = Pivot ? CudaArray(Cint, (n, length(A))) : C_NULL
+            Aptrs = CuArray(map( (x) -> pointer(x).ptr, A ))
+            info  = CuArray{Cint}(length(A))
+            pivotArray  = Pivot ? CuArray{Int32}((n, length(A))) : C_NULL
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint,
                               Ptr{Cint}, Ptr{Cint}, Cint), cublashandle[1], n,
                               Aptrs, lda, pivotArray, info, length(A)))
             if( !Pivot )
-                pivotArray = CudaArray(zeros(Cint, (n, length(A))))
+                pivotArray = CuArray(zeros(Cint, (n, length(A))))
             end
             pivotArray, info, A
         end
-        function getrf_batched(A::Array{CudaMatrix{$elty},1},
+        function getrf_batched(A::Array{CuMatrix{$elty},1},
                                Pivot::Bool)
             newA = copy(A)
             pivotarray, info = getrf_batched!(newA, Pivot)
@@ -1598,21 +1598,21 @@ for (fname, elty) in
         #   cublasHandle_t handle, int n, double **A,
         #   int lda, int *PivotArray, double **C,
         #   int ldc, int *info, int batchSize)
-        function getri_batched(A::Array{CudaMatrix{$elty},1},
-                              pivotArray::CudaMatrix{Cint})
+        function getri_batched(A::Array{CuMatrix{$elty},1},
+                              pivotArray::CuMatrix{Cint})
             for As in A
                 m,n = size(As)
                 if m != n
                     throw(DimensionMismatch("All A matrices must be square!"))
                 end
             end
-            C = CudaMatrix{$elty}[similar(A[1]) for i in 1:length(A)]
+            C = CuMatrix{$elty}[similar(A[1]) for i in 1:length(A)]
             n = size(A[1])[1]
             lda = max(1,stride(A[1],2))
             ldc = max(1,stride(C[1],2))
-            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
-            Cptrs = CudaArray(map( (x) -> pointer(x).ptr, C ))
-            info = CudaArray(zeros(Cint,length(A)))
+            Aptrs = CuArray(map( (x) -> pointer(x).ptr, A ))
+            Cptrs = CuArray(map( (x) -> pointer(x).ptr, C ))
+            info = CuArray(zeros(Cint,length(A)))
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint,
                               Ptr{Cint}, Ptr{Ptr{$elty}}, Cint, Ptr{Cint}, Cint),
@@ -1635,7 +1635,7 @@ for (fname, elty) in
         #   cublasHandle_t handle, int n, double **A,
         #   int lda, double **C, int ldc,
         #   int *info, int batchSize)
-        function matinv_batched(A::Array{CudaMatrix{$elty},1})
+        function matinv_batched(A::Array{CuMatrix{$elty},1})
             for As in A
                 m,n = size(As)
                 if m != n
@@ -1645,13 +1645,13 @@ for (fname, elty) in
                     throw(ArgumentError("matinv requires all matrices be smaller than 32 x 32"))
                 end
             end
-            C = CudaMatrix{$elty}[similar(A[1]) for i in 1:length(A)]
+            C = CuMatrix{$elty}[similar(A[1]) for i in 1:length(A)]
             n = size(A[1])[1]
             lda = max(1,stride(A[1],2))
             ldc = max(1,stride(C[1],2))
-            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
-            Cptrs = CudaArray(map( (x) -> pointer(x).ptr, C ))
-            info = CudaArray(zeros(Cint,length(A)))
+            Aptrs = CuArray(map( (x) -> pointer(x).ptr, A ))
+            Cptrs = CuArray(map( (x) -> pointer(x).ptr, C ))
+            info = CuArray(zeros(Cint,length(A)))
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint,
                               Ptr{Ptr{$elty}}, Cint, Ptr{Cint}, Cint),
@@ -1674,16 +1674,16 @@ for (fname, elty) in
         #   cublasHandle_t handle, int n, int m,
         #   double **A, int lda, double **TauArray,
         #   int *infoArray, int batchSize)
-        function geqrf_batched!(A::Array{CudaMatrix{$elty},1})
+        function geqrf_batched!(A::Array{CuMatrix{$elty},1})
             m,n = size(A[1])
             lda = max(1,stride(A[1],2))
-            Aptrs = CudaArray(map( (x) -> pointer(x).ptr, A ))
+            Aptrs = CuArray(map( (x) -> pointer(x).ptr, A ))
             hTauArray = [zeros($elty, min(m,n)) for i in 1:length(A)]
-            TauArray = CudaArray{$elty,1}[]
+            TauArray = CuArray{$elty,1}[]
             for i in 1:length(A)
-                push!(TauArray,CudaArray(hTauArray[i]))
+                push!(TauArray,CuArray(hTauArray[i]))
             end
-            Tauptrs = CudaArray(map( (x) -> pointer(x).ptr, TauArray ))
+            Tauptrs = CuArray(map( (x) -> pointer(x).ptr, TauArray ))
             info    = zero(Cint)
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
                               (cublasHandle_t, Cint, Cint, Ptr{Ptr{$elty}},
@@ -1695,7 +1695,7 @@ for (fname, elty) in
             end
             TauArray, A
         end
-        function geqrf_batched(A::Array{CudaMatrix{$elty},1})
+        function geqrf_batched(A::Array{CuMatrix{$elty},1})
             geqrf_batched!(copy(A))
         end
     end
@@ -1715,8 +1715,8 @@ for (fname, elty) in
         #   double **C, int ldc, int *infoArray,
         #   int *devInfoArray, int batchSize)
         function gels_batched!(trans::BlasChar,
-                              A::Array{CudaMatrix{$elty},1},
-                              C::Array{CudaMatrix{$elty},1})
+                              A::Array{CuMatrix{$elty},1},
+                              C::Array{CuMatrix{$elty},1})
             cutrans = cublasop(trans)
             if( length(A) != length(C) )
                 throw(DimensionMismatch(""))
@@ -1735,10 +1735,10 @@ for (fname, elty) in
             nrhs = size(C[1])[2]
             lda = max(1,stride(A[1],2))
             ldc = max(1,stride(A[1],2))
-            Aptrs = CudaArray(map((x) -> pointer(x).ptr, A ))
-            Cptrs = CudaArray(map((x) -> pointer(x).ptr, C ))
+            Aptrs = CuArray(map((x) -> pointer(x).ptr, A ))
+            Cptrs = CuArray(map((x) -> pointer(x).ptr, C ))
             info  = zero(Cint)
-            infoarray = CudaArray(zeros(Cint, length(A)))
+            infoarray = CuArray(zeros(Cint, length(A)))
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
                               (cublasHandle_t, cublasOperation_t, Cint, Cint,
                               Cint, Ptr{Ptr{$elty}}, Cint, Ptr{Ptr{$elty}},
@@ -1751,8 +1751,8 @@ for (fname, elty) in
             A, C, infoarray
         end
         function gels_batched(trans::BlasChar,
-                             A::Array{CudaMatrix{$elty},1},
-                             C::Array{CudaMatrix{$elty},1})
+                             A::Array{CuMatrix{$elty},1},
+                             C::Array{CuMatrix{$elty},1})
             gels_batched!(trans, copy(A), copy(C))
         end
     end
@@ -1771,9 +1771,9 @@ for (fname, elty) in ((:cublasDdgmm,:Float64),
        #   const cuComplex *X, int incx,
        #   cuComplex *C, int ldc)
        function dgmm!(mode::BlasChar,
-                      A::CudaMatrix{$elty},
-                      X::CudaVector{$elty},
-                      C::CudaMatrix{$elty})
+                      A::CuMatrix{$elty},
+                      X::CuVector{$elty},
+                      C::CuMatrix{$elty})
            cuside = cublasside(mode)
            m, n = size(C)
            mA, nA = size(A)
@@ -1791,8 +1791,8 @@ for (fname, elty) in ((:cublasDdgmm,:Float64),
            C
        end
        function dgmm(mode::BlasChar,
-                     A::CudaMatrix{$elty},
-                     X::CudaVector{$elty})
+                     A::CuMatrix{$elty},
+                     X::CuVector{$elty})
            m,n = size(A)
            dgmm!( mode, A, X, similar(A, $elty, (m,n) ) )
        end

@@ -1614,7 +1614,7 @@ for (fname, elty) in
             Cptrs = CudaArray(map( (x) -> pointer(x).ptr, C ))
             info = CudaArray(zeros(Cint,length(A)))
             statuscheck(ccall(($(string(fname)),libcublas), cublasStatus_t,
-                              (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint, 
+                              (cublasHandle_t, Cint, Ptr{Ptr{$elty}}, Cint,
                               Ptr{Cint}, Ptr{Ptr{$elty}}, Cint, Ptr{Cint}, Cint),
                               cublashandle[1], n, Aptrs, lda, pivotArray, Cptrs,
                               ldc, info, length(A)))

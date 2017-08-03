@@ -175,5 +175,3 @@ end
 function Ac_mul_Bc{T,S}(A::CudaMatrix{T}, B::CudaMatrix{S})
     Ac_mul_Bc!(similar(B, T, (size(A,2), size(B,1))), A, B)
 end
-
-

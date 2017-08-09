@@ -72,7 +72,7 @@ function statuscheck(status)
 end
 
 # find the cublas library
-const libcublas = Libdl.find_library(["libcublas"], ["/usr/local/cuda"])
+const libcublas = Libdl.find_library(["libcublas"], ["/usr/local/cuda","/usr/local/cuda/lib64/"])
 if isempty(libcublas)
     error("CUBLAS library cannot be found. Please make sure that CUDA is installed")
 end

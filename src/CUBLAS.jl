@@ -15,8 +15,6 @@ using CUDAdrv: OwnedPtr, CuArray, CuVector, CuMatrix
 
 CuVecOrMat{T} = Union{CuVector{T},CuMatrix{T}}
 
-const cudaStream_t = Ptr{Void}
-
 const BlasChar = Char #import Base.LinAlg.BlasChar
 import Base.one
 import Base.zero
@@ -79,6 +77,9 @@ const libcublas = Libdl.find_library(["libcublas"], ["/usr/local/cuda"])
 if isempty(libcublas)
     error("CUBLAS library cannot be found. Please make sure that CUDA is installed")
 end
+
+# Typedef needed by libcublas
+const cudaStream_t = Ptr{Void}
 
 include("libcublas.jl")
 

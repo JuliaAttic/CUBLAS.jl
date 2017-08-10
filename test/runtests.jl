@@ -1,6 +1,6 @@
 import Base.LinAlg.BLAS
 using CUBLAS
-using CUDAdrv: OwnedPtr, CuArray, CuVector, CuMatrix
+using CUDAdrv: CuArray, CuVector, CuMatrix
 using Base.Test
 
 @testset "CUBLAS" begin

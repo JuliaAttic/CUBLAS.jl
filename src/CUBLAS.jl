@@ -11,8 +11,9 @@ module CUBLAS
 
 importall Base.LinAlg.BLAS
 
-using CUDArt
-using CUDArt.rt.cudaStream_t
+using CUDAdrv: OwnedPtr, CuArray, CuVector, CuMatrix
+
+CuVecOrMat{T} = Union{CuVector{T},CuMatrix{T}}
 
 const BlasChar = Char #import Base.LinAlg.BlasChar
 import Base.one
@@ -76,6 +77,9 @@ const libcublas = Libdl.find_library(["libcublas"], ["/usr/local/cuda","/usr/loc
 if isempty(libcublas)
     error("CUBLAS library cannot be found. Please make sure that CUDA is installed")
 end
+
+# Typedef needed by libcublas
+const cudaStream_t = Ptr{Void}
 
 include("libcublas.jl")
 

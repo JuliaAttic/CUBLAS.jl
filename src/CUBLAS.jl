@@ -11,6 +11,7 @@ module CUBLAS
 
 importall Base.LinAlg.BLAS
 
+using CUDAdrv
 using CUDAdrv: OwnedPtr, CuArray, CuVector, CuMatrix
 
 CuVecOrMat{T} = Union{CuVector{T},CuMatrix{T}}

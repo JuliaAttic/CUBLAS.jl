@@ -36,7 +36,7 @@ end
 end
 
 @testset "scal!" begin
-    function test_scal!{T}(alpha,A::Array{T})
+    function test_scal!(alpha,A::Array{T}) where T
         @test ndims(A) == 1
         n1 = length(A)
         d_A = CuArray(A)

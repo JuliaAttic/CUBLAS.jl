@@ -63,7 +63,7 @@ const CublasReal = Union{Float64,Float32}
 const CublasComplex = Union{Complex128,Complex64}
 # FP16 (cuda_fp16.h) in cuda
 const __half = Float16
-immutable __half2
+struct __half2
     x1::__half
     x2::__half
 end

@@ -149,17 +149,17 @@ for (jname, fname, elty) in ((:dot,:cublasDdot_v2,:Float64),
     end
 end
 # TODO: inspect blas.jl in julia to correct types here (dot{c,u})
-function dot{T<:Union{Float32,Float64}}(DX::CuArray{T}, DY::CuArray{T})
+function dot(DX::CuArray{T}, DY::CuArray{T}) where T<:Union{Float32,Float64}
     n = length(DX)
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
     dot(n, DX, 1, DY, 1)
 end
-function dotc{T<:Union{Complex64,Complex128}}(DX::CuArray{T}, DY::CuArray{T})
+function dotc(DX::CuArray{T}, DY::CuArray{T}) where T<:Union{Complex64,Complex128}
     n = length(DX)
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
     dotc(n, DX, 1, DY, 1)
 end
-function dotu{T<:Union{Complex64,Complex128}}(DX::CuArray{T}, DY::CuArray{T})
+function dotu(DX::CuArray{T}, DY::CuArray{T}) where T<:Union{Complex64,Complex128}
     n = length(DX)
     n==length(DY) || throw(DimensionMismatch("dot product arguments have lengths $(length(DX)) and $(length(DY))"))
     dotu(n, DX, 1, DY, 1)
@@ -242,18 +242,18 @@ for (fname, elty) in ((:cublasDaxpy_v2,:Float64),
     end
 end
 
-function axpy!{T<:CublasFloat,Ta<:Number}(alpha::Ta,
-                                          x::CuArray{T},
-                                          y::CuArray{T})
+function axpy!(alpha::Ta,
+               x::CuArray{T},
+               y::CuArray{T}) where {T<:CublasFloat,Ta<:Number}
     length(x)==length(y) || throw(DimensionMismatch(""))
     axpy!(length(x), convert(T,alpha), x, 1, y, 1)
 end
 
-function axpy!{T<:CublasFloat,Ta<:Number,Ti<:Integer}(alpha::Ta,
-                                                      x::CuArray{T},
-                                                      rx::Union{UnitRange{Ti},Range{Ti}},
-                                                      y::CuArray{T},
-                                                      ry::Union{UnitRange{Ti},Range{Ti}})
+function axpy!(alpha::Ta,
+               x::CuArray{T},
+               rx::Union{UnitRange{Ti},Range{Ti}},
+               y::CuArray{T},
+               ry::Union{UnitRange{Ti},Range{Ti}}) where {T<:CublasFloat,Ta<:Number,Ti<:Integer}
     length(rx)==length(ry) || throw(DimensionMismatch(""))
     if minimum(rx) < 1 || maximum(rx) > length(x) || minimum(ry) < 1 || maximum(ry) > length(y)
         throw(BoundsError())

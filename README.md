@@ -1,3 +1,7 @@
+### Note: This package is being phased out.
+
+The same functionality is available with [CuArrays](https://github.com/JuliaGPU/CuArrays.jl).
+
 # CUBLAS.jl
 
 **Build status**: [![][buildbot-julia05-img]][buildbot-julia05-url] [![][buildbot-julia06-img]][buildbot-julia06-url]
